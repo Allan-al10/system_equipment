@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "TecPrint",
+    "slug": "tecprint",
+    "scheme": "tecprint",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F3F6FB",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tecprint.app"
+    },
+    "android": {
+      "package": "com.tecprint.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1D4ED8",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-sharing",
+      "expo-document-picker",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#F3F6FB"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
