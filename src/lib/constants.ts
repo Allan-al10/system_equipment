@@ -13,3 +13,5 @@ export const ACCESSORY_OPTIONS = [
 ];
 
 export const WARRANTY_PRESETS = [0, 30, 90, 180, 365];
+
+export const DEADLINE_PRESETS = [0, 3, 7, 15, 30];

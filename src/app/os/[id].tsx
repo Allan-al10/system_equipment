@@ -29,11 +29,11 @@ import {
   Tag,
 } from '@/components/ui';
 import {
+  ALL_STATUSES,
   colors,
   getNextStatus,
   NEXT_ACTION_LABEL,
   radius,
-  STATUS_FLOW,
   STATUS_META,
 } from '@/lib/theme';
 import type { BudgetItem, OrderPatch, OSStatus, ServiceOrder } from '@/lib/types';
@@ -41,21 +41,25 @@ import {
   addDays,
   formatCurrency,
   formatDate,
+  formatDateInput,
   formatDateTime,
+  parseDateInput,
   phoneDigits,
   uid,
 } from '@/lib/format';
 import {
   findRelatedOrders,
   getWarrantyEnd,
+  isOrderOverdue,
   isWarrantyActive,
   itemTotal,
   orderTotal,
+  overdueDays,
   warrantyLabel,
 } from '@/lib/os-utils';
 import { buildBudgetText, buildOrderSummary, shareText } from '@/lib/share';
 import { confirmAsync } from '@/lib/confirm';
-import { WARRANTY_PRESETS } from '@/lib/constants';
+import { DEADLINE_PRESETS, WARRANTY_PRESETS } from '@/lib/constants';
 
 interface FormState {
   reportedDefect: string;
@@ -64,6 +68,9 @@ interface FormState {
   servicePerformed: string;
   internalNotes: string;
   warrantyDaysText: string;
+  dueDateText: string;
+  warrantyPending: boolean;
+  warrantyPendingNote: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -73,9 +80,10 @@ const EMPTY_FORM: FormState = {
   servicePerformed: '',
   internalNotes: '',
   warrantyDaysText: '90',
+  dueDateText: '',
+  warrantyPending: false,
+  warrantyPendingNote: '',
 };
-
-const ALL_STATUSES: OSStatus[] = [...STATUS_FLOW, 'cancelada'];
 
 function formFromOrder(order: ServiceOrder): FormState {
   return {
@@ -85,6 +93,9 @@ function formFromOrder(order: ServiceOrder): FormState {
     servicePerformed: order.servicePerformed,
     internalNotes: order.internalNotes,
     warrantyDaysText: String(order.warrantyDays),
+    dueDateText: order.dueDate ? formatDate(order.dueDate) : '',
+    warrantyPending: order.warrantyPending,
+    warrantyPendingNote: order.warrantyPendingNote,
   };
 }
 
@@ -111,6 +122,7 @@ export default function OrderDetailScreen() {
     item: null,
   });
   const [showStatuses, setShowStatuses] = useState(false);
+  const [dateErrorVisible, setDateErrorVisible] = useState(false);
   const formOrderIdRef = useRef(order?.id);
 
   useEffect(() => {
@@ -160,13 +172,25 @@ export default function OrderDetailScreen() {
       ? addDays(order.deliveredAt, warrantyDaysNumber)
       : null;
 
+  const parsedDueDate = parseDateInput(form.dueDateText);
+  const dueDateError =
+    form.dueDateText.trim().length > 0 && !parsedDueDate
+      ? 'Data inválida. Use o formato dd/mm/aaaa.'
+      : '';
+  const overdue = isOrderOverdue(order);
+  const lateDays = overdue ? overdueDays(order) : 0;
+  const formHasPending = overdue || form.warrantyPending;
+
   const dirty =
     form.reportedDefect !== order.reportedDefect ||
     form.diagnosis !== order.diagnosis ||
     form.budgetNotes !== order.budgetNotes ||
     form.servicePerformed !== order.servicePerformed ||
     form.internalNotes !== order.internalNotes ||
-    form.warrantyDaysText !== String(order.warrantyDays);
+    form.warrantyDaysText !== String(order.warrantyDays) ||
+    form.dueDateText !== (order.dueDate ? formatDate(order.dueDate) : '') ||
+    form.warrantyPending !== order.warrantyPending ||
+    (form.warrantyPending && form.warrantyPendingNote !== order.warrantyPendingNote);
 
   const buildPatch = () => {
     const patch: OrderPatch = {
@@ -176,15 +200,33 @@ export default function OrderDetailScreen() {
       servicePerformed: form.servicePerformed.trim(),
       internalNotes: form.internalNotes.trim(),
       warrantyDays: warrantyDaysNumber,
+      dueDate: parsedDueDate ?? undefined,
+      warrantyPending: form.warrantyPending,
+      warrantyPendingNote: form.warrantyPending ? form.warrantyPendingNote.trim() : '',
     };
 
+    const nextDueDateText = patch.dueDate ? formatDate(patch.dueDate) : '';
+    const currentDueDateText = order.dueDate ? formatDate(order.dueDate) : '';
+
     const changed: string[] = [];
-    if (patch.reportedDefect !== order.reportedDefect) changed.push('defeito relatado');
+    if (patch.reportedDefect !== order.reportedDefect) changed.push('anotações do cliente');
     if (patch.diagnosis !== order.diagnosis) changed.push('diagnóstico');
     if (patch.budgetNotes !== order.budgetNotes) changed.push('observações do orçamento');
-    if (patch.servicePerformed !== order.servicePerformed) changed.push('serviço executado');
-    if (patch.internalNotes !== order.internalNotes) changed.push('observações internas');
+    if (patch.servicePerformed !== order.servicePerformed) changed.push('soluções');
+    if (patch.internalNotes !== order.internalNotes) changed.push('anotações internas');
     if (patch.warrantyDays !== order.warrantyDays) changed.push('garantia');
+    if (nextDueDateText !== currentDueDateText) {
+      changed.push(patch.dueDate ? 'prazo de entrega' : 'prazo de entrega removido');
+    }
+    if (patch.warrantyPending !== order.warrantyPending) {
+      changed.push(patch.warrantyPending ? 'garantia a fazer' : 'garantia resolvida');
+    }
+    if (
+      patch.warrantyPending &&
+      patch.warrantyPendingNote !== order.warrantyPendingNote
+    ) {
+      changed.push('observação da garantia');
+    }
 
     const nextForm: FormState = {
       reportedDefect: patch.reportedDefect ?? '',
@@ -193,17 +235,29 @@ export default function OrderDetailScreen() {
       servicePerformed: patch.servicePerformed ?? '',
       internalNotes: patch.internalNotes ?? '',
       warrantyDaysText: String(warrantyDaysNumber),
+      dueDateText: nextDueDateText,
+      warrantyPending: patch.warrantyPending ?? false,
+      warrantyPendingNote: patch.warrantyPendingNote ?? '',
     };
 
     return { patch, changed, nextForm };
   };
 
-  const saveChanges = (showFeedback = true) => {
+  const saveChanges = (showFeedback = true): boolean => {
+    if (dueDateError) {
+      setDateErrorVisible(true);
+      if (showFeedback) {
+        toast('Informe o prazo de entrega no formato dd/mm/aaaa.', 'error');
+      }
+      return false;
+    }
+
     const { patch, changed, nextForm } = buildPatch();
 
     if (changed.length === 0) {
       setForm(nextForm);
-      return;
+      setDateErrorVisible(false);
+      return true;
     }
 
     updateOrder(order.id, patch, {
@@ -213,13 +267,15 @@ export default function OrderDetailScreen() {
       detail: `Alterado: ${changed.join(', ')}.`,
     });
     setForm(nextForm);
+    setDateErrorVisible(false);
 
     if (showFeedback) toast('Alterações salvas.');
+    return true;
   };
 
   const applyStatus = async (next: OSStatus) => {
     if (next === order.status) return;
-    if (dirty) saveChanges(false);
+    if (dirty && !saveChanges(false)) return;
     changeStatus(order.id, next);
     toast(`Status alterado para ${STATUS_META[next].label}.`);
   };
@@ -227,24 +283,24 @@ export default function OrderDetailScreen() {
   const handleNext = async () => {
     if (!nextStatus) return;
 
-    if (nextStatus === 'aguardando_aprovacao' && order.budgetItems.length === 0) {
+    if (nextStatus === 'orcamento_realizado' && order.budgetItems.length === 0) {
       const ok = await confirmAsync(
         'Orçamento sem itens',
-        'Nenhuma peça ou serviço foi adicionado ao orçamento. Enviar para aprovação mesmo assim?',
-        'Enviar',
+        'Nenhuma peça ou serviço foi adicionado ao orçamento. Finalizar o orçamento mesmo assim?',
+        'Finalizar',
       );
       if (!ok) return;
     }
 
     if (
-      nextStatus === 'concluida' &&
+      nextStatus === 'pronto' &&
       !form.servicePerformed.trim() &&
       !order.servicePerformed.trim()
     ) {
       const ok = await confirmAsync(
-        'Serviço não descrito',
-        'O campo "Serviço executado" está vazio. Deseja concluir mesmo assim?',
-        'Concluir',
+        'Soluções não descritas',
+        'O campo "Soluções" está vazio. Deseja marcar o equipamento como pronto mesmo assim?',
+        'Marcar pronto',
       );
       if (!ok) return;
     }
@@ -255,13 +311,38 @@ export default function OrderDetailScreen() {
   const handleReject = async () => {
     const ok = await confirmAsync(
       'Recusar orçamento',
-      'A OS será marcada como cancelada. Deseja continuar?',
+      'A OS será marcada como recusada. Deseja continuar?',
       'Recusar',
       true,
     );
     if (!ok) return;
-    await applyStatus('cancelada');
+    await applyStatus('recusado');
   };
+
+  const handleDeliver = async () => {
+    if (order.deliveredAt) return;
+
+    const ok = await confirmAsync(
+      'Registrar entrega',
+      'Confirmar a entrega do equipamento ao cliente? A garantia começará a contar a partir de agora.',
+      'Entregar',
+    );
+    if (!ok) return;
+
+    if (dirty && !saveChanges(false)) return;
+
+    const now = new Date().toISOString();
+    updateOrder(
+      order.id,
+      { deliveredAt: now },
+      {
+        id: uid('h_'),
+        at: now,
+        title: 'Equipamento entregue',
+        detail: 'Garantia iniciada na data da entrega.',
+      },
+    );
+    toast('Entrega registrada. Garantia iniciada.');  };
 
   const handleManualStatus = async (status: OSStatus) => {
     if (status === order.status) return;
@@ -275,7 +356,7 @@ export default function OrderDetailScreen() {
   };
 
   const handleShareSummary = async () => {
-    if (dirty) saveChanges(false);
+    if (dirty && !saveChanges(false)) return;
     const { patch } = buildPatch();
     const target: ServiceOrder = { ...order, ...patch };
     const result = await shareText(buildOrderSummary(target, settings), `OS ${order.number}`);
@@ -289,7 +370,7 @@ export default function OrderDetailScreen() {
       toast('Adicione itens ao orçamento primeiro.', 'error');
       return;
     }
-    if (dirty) saveChanges(false);
+    if (dirty && !saveChanges(false)) return;
     const { patch } = buildPatch();
     const target: ServiceOrder = { ...order, ...patch };
     const result = await shareText(
@@ -423,14 +504,58 @@ export default function OrderDetailScreen() {
               />
             ) : null}
 
-            {order.status === 'aguardando_aprovacao' ? (
+            {order.status === 'pronto' ? (
+              order.deliveredAt ? (
+                <View style={styles.deliveredRow}>
+                  <Ionicons name="bag-check-outline" size={16} color={colors.success} />
+                  <Text style={styles.deliveredText}>
+                    Entregue em {formatDateTime(order.deliveredAt)}
+                  </Text>
+                </View>
+              ) : (
+                <Button
+                  label="Registrar entrega"
+                  icon="bag-check-outline"
+                  variant="soft"
+                  onPress={handleDeliver}
+                  fullWidth
+                  style={styles.nextButton}
+                />
+              )
+            ) : null}
+
+            {order.status === 'esperando_resposta' || order.status === 'orcamento_realizado' ? (
               <Button
-                label="Orçamento recusado"
+                label="Cliente recusou"
                 icon="close-circle-outline"
                 variant="dangerSoft"
                 onPress={handleReject}
                 fullWidth
                 style={styles.rejectButton}
+              />
+            ) : null}
+
+            {order.status === 'recusado' ? (
+              <Button
+                label="Reabrir orçamento"
+                icon="refresh-outline"
+                variant="soft"
+                onPress={() => applyStatus('orcamento')}
+                fullWidth
+                style={styles.nextButton}
+              />
+            ) : null}
+
+            {order.status === 'pronto' || order.status === 'recusado' ? (
+              <Button
+                label="Ver registro"
+                icon="archive-outline"
+                variant="outline"
+                onPress={() =>
+                  router.push({ pathname: '/registro/[id]', params: { id: order.id } })
+                }
+                fullWidth
+                style={styles.nextButton}
               />
             ) : null}
 
@@ -466,6 +591,126 @@ export default function OrderDetailScreen() {
                   );
                 })}
               </View>
+            ) : null}
+          </Card>
+
+          <Card style={formHasPending ? styles.pendingCard : undefined}>
+            <SectionTitle
+              title="Pendências"
+              subtitle="Acompanhe prazos e garantias que precisam de atenção."
+              icon="alert-circle-outline"
+            />
+
+            <View style={styles.pendingTags}>
+              {overdue ? (
+                <Tag
+                  label={
+                    lateDays > 0
+                      ? `Atrasada há ${lateDays} ${lateDays === 1 ? 'dia' : 'dias'}`
+                      : 'Serviço atrasado'
+                  }
+                  color={colors.danger}
+                  backgroundColor={colors.dangerSoft}
+                />
+              ) : null}
+              {form.warrantyPending ? (
+                <Tag
+                  label="Garantia a fazer"
+                  color={colors.purple}
+                  backgroundColor={colors.purpleSoft}
+                />
+              ) : null}
+              {!overdue && !form.warrantyPending ? (
+                <Tag
+                  label="Sem pendências"
+                  color={colors.success}
+                  backgroundColor={colors.successSoft}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.cardGap} />
+            <Field
+              label="Prazo de entrega"
+              value={form.dueDateText}
+              onChangeText={(text) => {
+                setForm((previous) => ({
+                  ...previous,
+                  dueDateText: formatDateInput(text),
+                }));
+                setDateErrorVisible(false);
+              }}
+              placeholder="dd/mm/aaaa"
+              keyboardType="numeric"
+              hint="Se o prazo passar e a OS não for entregue, ela aparece automaticamente em Pendências."
+              error={dateErrorVisible ? dueDateError : undefined}
+            />
+
+            <View style={styles.presets}>
+              {DEADLINE_PRESETS.filter((days) => days > 0).map((days) => {
+                const value = formatDate(addDays(new Date().toISOString(), days));
+                return (
+                  <Chip
+                    key={days}
+                    label={`+${days} dias`}
+                    selected={form.dueDateText === value}
+                    onPress={() =>
+                      setForm((previous) => ({ ...previous, dueDateText: value }))
+                    }
+                  />
+                );
+              })}
+              {form.dueDateText ? (
+                <Chip
+                  label="Limpar"
+                  icon="close-outline"
+                  onPress={() => {
+                    setForm((previous) => ({ ...previous, dueDateText: '' }));
+                    setDateErrorVisible(false);
+                  }}
+                />
+              ) : null}
+            </View>
+
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: form.warrantyPending }}
+              onPress={() =>
+                setForm((previous) => ({
+                  ...previous,
+                  warrantyPending: !previous.warrantyPending,
+                }))
+              }
+              style={({ pressed }) => [
+                styles.warrantyToggle,
+                form.warrantyPending && styles.warrantyToggleActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={[styles.checkbox, form.warrantyPending && styles.checkboxActive]}>
+                {form.warrantyPending ? (
+                  <Ionicons name="checkmark" size={14} color={colors.white} />
+                ) : null}
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.warrantyToggleTitle}>Garantia a fazer</Text>
+                <Text style={styles.warrantyToggleText}>
+                  Marque quando o equipamento voltar com um serviço em garantia pendente.
+                </Text>
+              </View>
+            </Pressable>
+
+            {form.warrantyPending ? (
+              <Field
+                label="Observação da garantia"
+                value={form.warrantyPendingNote}
+                onChangeText={(text) =>
+                  setForm((previous) => ({ ...previous, warrantyPendingNote: text }))
+                }
+                placeholder="Ex.: trocar rolete em garantia; cliente aguardando peça..."
+                multiline
+                containerStyle={styles.noMargin}
+              />
             ) : null}
           </Card>
 
@@ -522,6 +767,13 @@ export default function OrderDetailScreen() {
               label="Entrada"
               value={formatDateTime(order.createdAt)}
             />
+            {order.deliveredAt ? (
+              <InfoRow
+                icon="bag-check-outline"
+                label="Entrega"
+                value={formatDateTime(order.deliveredAt)}
+              />
+            ) : null}
 
             {order.accessories.length ? (
               <View style={styles.accessories}>
@@ -595,9 +847,9 @@ export default function OrderDetailScreen() {
 
           <Card>
             <SectionTitle
-              title="Defeito relatado"
-              subtitle="Descrição feita na entrada da OS."
-              icon="alert-circle-outline"
+              title="Anotações do cliente"
+              subtitle="Defeito ou possível defeito na visão do cliente."
+              icon="chatbubble-ellipses-outline"
             />
             <View style={styles.cardGap} />
             <Field
@@ -606,7 +858,7 @@ export default function OrderDetailScreen() {
               onChangeText={(text) =>
                 setForm((previous) => ({ ...previous, reportedDefect: text }))
               }
-              placeholder="Ex.: luzes piscando, erro no Wi-Fi, scanner com defeito..."
+              placeholder="Ex.: cliente relata luzes piscando e acha que é problema de Wi-Fi..."
               multiline
               containerStyle={styles.noMargin}
             />
@@ -615,12 +867,12 @@ export default function OrderDetailScreen() {
           <Card>
             <SectionTitle
               title="Diagnóstico técnico"
-              subtitle="Testes realizados e causa identificada."
+              subtitle="Resultado dos testes e causa confirmada."
               icon="search-outline"
             />
             <View style={styles.cardGap} />
             <Field
-              label="Diagnóstico"
+              label="Diagnóstico confirmado"
               value={form.diagnosis}
               onChangeText={(text) => setForm((previous) => ({ ...previous, diagnosis: text }))}
               placeholder="Ex.: fonte sem tensão de 24 V; cabo flat do scanner rompido..."
@@ -724,8 +976,8 @@ export default function OrderDetailScreen() {
 
           <Card>
             <SectionTitle
-              title="Serviço executado"
-              subtitle="Registro importante para garantia e retornos."
+              title="Soluções"
+              subtitle="Serviço realizado para corrigir o equipamento."
               icon="construct-outline"
             />
             <View style={styles.cardGap} />
@@ -735,7 +987,7 @@ export default function OrderDetailScreen() {
               onChangeText={(text) =>
                 setForm((previous) => ({ ...previous, servicePerformed: text }))
               }
-              placeholder="Ex.: limpeza do cabeçote, troca do rolete de tração, reset de rede..."
+              placeholder="Ex.: troca do rolete de tração, limpeza do cabeçote e reset de rede..."
               multiline
             />
 
@@ -780,18 +1032,18 @@ export default function OrderDetailScreen() {
 
           <Card>
             <SectionTitle
-              title="Observações internas"
-              subtitle="Não aparecem no resumo compartilhado."
+              title="Anotações internas"
+              subtitle="Provável defeito e observações da bancada. Não aparecem no resumo compartilhado."
               icon="lock-closed-outline"
             />
             <View style={styles.cardGap} />
             <Field
-              label="Anotações da bancada"
+              label="Provável defeito / anotações internas"
               value={form.internalNotes}
               onChangeText={(text) =>
                 setForm((previous) => ({ ...previous, internalNotes: text }))
               }
-              placeholder="Ex.: peça encomendada, cliente avisado por WhatsApp..."
+              placeholder="Ex.: provável fonte com defeito; peça encomendada; cliente avisado..."
               multiline
               containerStyle={styles.noMargin}
             />
@@ -936,6 +1188,22 @@ const styles = StyleSheet.create({
   nextButton: {
     marginTop: 14,
   },
+  deliveredRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.successSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 14,
+  },
+  deliveredText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: colors.success,
+  },
   rejectButton: {
     marginTop: 8,
   },
@@ -957,6 +1225,56 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
+  },
+  pendingCard: {
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFDF5',
+  },
+  pendingTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 12,
+  },
+  warrantyToggle: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    padding: 12,
+    marginBottom: 12,
+  },
+  warrantyToggleActive: {
+    borderColor: colors.purple,
+    backgroundColor: colors.purpleSoft,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxActive: {
+    borderColor: colors.purple,
+    backgroundColor: colors.purple,
+  },
+  warrantyToggleTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  warrantyToggleText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginTop: 2,
   },
   contactRow: {
     flexDirection: 'row',

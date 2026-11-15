@@ -48,6 +48,7 @@ export function buildOrderSummary(order: ServiceOrder, settings: Settings): stri
   lines.push(`*${header}*`);
   lines.push(`*OS ${order.number}* — ${STATUS_META[order.status].label}`);
   lines.push(`Entrada: ${formatDate(order.createdAt)}`);
+  if (order.dueDate) lines.push(`Prazo de entrega: ${formatDate(order.dueDate)}`);
 
   if (settings.technicianName.trim()) {
     lines.push(`Técnico: ${settings.technicianName.trim()}`);
@@ -66,7 +67,7 @@ export function buildOrderSummary(order: ServiceOrder, settings: Settings): stri
 
   if (order.reportedDefect.trim()) {
     lines.push('');
-    lines.push('*Defeito relatado*');
+    lines.push('*Anotações do cliente*');
     lines.push(order.reportedDefect.trim());
   }
 
@@ -90,7 +91,7 @@ export function buildOrderSummary(order: ServiceOrder, settings: Settings): stri
 
   if (order.servicePerformed.trim()) {
     lines.push('');
-    lines.push('*Serviço executado*');
+    lines.push('*Soluções*');
     lines.push(order.servicePerformed.trim());
   }
 
@@ -123,7 +124,7 @@ export function buildBudgetText(order: ServiceOrder, settings: Settings): string
   if (order.serial.trim()) lines.push(`*Nº de série:* ${order.serial.trim()}`);
   if (order.reportedDefect.trim()) {
     lines.push('');
-    lines.push(`*Defeito relatado:* ${order.reportedDefect.trim()}`);
+    lines.push(`*Anotações do cliente:* ${order.reportedDefect.trim()}`);
   }
 
   lines.push('');

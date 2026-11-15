@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: Settings = {
   companyName: '',
   phone: '',
   defaultWarrantyDays: 90,
+  defaultDeadlineDays: 7,
 };
 
 interface SeedDefect {

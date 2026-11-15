@@ -12,14 +12,12 @@ export const DEFECT_CATEGORIES = [
 export type DefectCategory = (typeof DEFECT_CATEGORIES)[number];
 
 export type OSStatus =
-  | 'recebida'
-  | 'em_analise'
-  | 'aguardando_aprovacao'
-  | 'aprovada'
-  | 'em_reparo'
-  | 'concluida'
-  | 'entregue'
-  | 'cancelada';
+  | 'orcamento'
+  | 'orcamento_realizado'
+  | 'esperando_resposta'
+  | 'autorizado'
+  | 'pronto'
+  | 'recusado';
 
 export type BudgetItemKind = 'peca' | 'servico';
 
@@ -57,9 +55,13 @@ export interface ServiceOrder {
   servicePerformed: string;
   internalNotes: string;
   warrantyDays: number;
+  dueDate?: string;
+  warrantyPending: boolean;
+  warrantyPendingNote: string;
   approvedAt?: string;
   completedAt?: string;
   deliveredAt?: string;
+  canceledAt?: string;
   history: HistoryEvent[];
 }
 
@@ -79,9 +81,13 @@ export type OrderPatch = Partial<
     | 'servicePerformed'
     | 'internalNotes'
     | 'warrantyDays'
+    | 'dueDate'
+    | 'warrantyPending'
+    | 'warrantyPendingNote'
     | 'approvedAt'
     | 'completedAt'
     | 'deliveredAt'
+    | 'canceledAt'
   >
 >;
 
@@ -94,6 +100,7 @@ export interface NewOrderInput {
   accessories: string[];
   reportedDefect: string;
   internalNotes: string;
+  servicePerformed: string;
 }
 
 export interface DefectEntry {
@@ -118,6 +125,7 @@ export interface Settings {
   companyName: string;
   phone: string;
   defaultWarrantyDays: number;
+  defaultDeadlineDays: number;
 }
 
 export interface AppData {

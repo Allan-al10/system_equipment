@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { useData } from '@/lib/data-context';
-import { colors } from '@/lib/theme';
+import { colors, radius } from '@/lib/theme';
 import {
   filterOrders,
+  getPendingSummary,
   ORDER_FILTERS,
   type OrderFilterKey,
 } from '@/lib/os-utils';
@@ -33,8 +35,11 @@ export default function OrdersScreen() {
   };
 
   const filtered = useMemo(() => filterOrders(orders, filter, query), [orders, filter, query]);
+  const pendingSummary = useMemo(() => getPendingSummary(orders), [orders]);
 
   const hasFilters = filter !== 'todas' || query.trim().length > 0;
+  const isPendingFilter = filter === 'pendencias';
+  const showPendingEmpty = isPendingFilter && query.trim().length === 0;
 
   const clearFilters = () => {
     setFilter('todas');
@@ -75,12 +80,44 @@ export default function OrdersScreen() {
           {ORDER_FILTERS.map((item) => (
             <Chip
               key={item.key}
-              label={item.label}
+              label={
+                item.key === 'pendencias' && pendingSummary.total > 0
+                  ? `${item.label} (${pendingSummary.total})`
+                  : item.label
+              }
+              color={
+                item.key === 'pendencias' && pendingSummary.total > 0
+                  ? colors.warning
+                  : undefined
+              }
               selected={filter === item.key}
               onPress={() => setFilter(item.key)}
             />
           ))}
         </ScrollView>
+        {isPendingFilter ? (
+          <View
+            style={[
+              styles.pendingBanner,
+              pendingSummary.total === 0 && styles.pendingBannerClear,
+            ]}
+          >
+            <Ionicons
+              name={pendingSummary.total > 0 ? 'alert-circle-outline' : 'checkmark-done-outline'}
+              size={16}
+              color={pendingSummary.total > 0 ? colors.warning : colors.success}
+            />
+            <Text style={styles.pendingBannerText}>
+              {pendingSummary.total > 0
+                ? `${pendingSummary.overdue} ${
+                    pendingSummary.overdue === 1 ? 'serviço atrasado' : 'serviços atrasados'
+                  } • ${pendingSummary.warranty} ${
+                    pendingSummary.warranty === 1 ? 'garantia a fazer' : 'garantias a fazer'
+                  }`
+                : 'Nenhum serviço atrasado e nenhuma garantia a fazer.'}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       <FlatList
@@ -92,12 +129,26 @@ export default function OrdersScreen() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <EmptyState
-            icon={orders.length === 0 ? 'file-tray-outline' : 'search-outline'}
-            title={orders.length === 0 ? 'Nenhuma OS registrada' : 'Nenhuma OS encontrada'}
+            icon={
+              orders.length === 0
+                ? 'file-tray-outline'
+                : showPendingEmpty
+                  ? 'checkmark-done-outline'
+                  : 'search-outline'
+            }
+            title={
+              orders.length === 0
+                ? 'Nenhuma OS registrada'
+                : showPendingEmpty
+                  ? 'Tudo em dia'
+                  : 'Nenhuma OS encontrada'
+            }
             description={
               orders.length === 0
                 ? 'Abra a primeira ordem de serviço ao receber uma impressora.'
-                : 'Tente outro termo de busca ou remova os filtros aplicados.'
+                : showPendingEmpty
+                  ? 'Nenhum serviço atrasado e nenhuma garantia a fazer no momento.'
+                  : 'Tente outro termo de busca ou remova os filtros aplicados.'
             }
             actionLabel={orders.length === 0 ? 'Abrir nova OS' : hasFilters ? 'Limpar filtros' : undefined}
             onAction={
@@ -130,6 +181,28 @@ const styles = StyleSheet.create({
   filterRow: {
     gap: 8,
     paddingRight: 16,
+  },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.warningSoft,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  pendingBannerClear: {
+    backgroundColor: colors.successSoft,
+    borderColor: '#BBF7D0',
+  },
+  pendingBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 17,
   },
   list: {
     paddingHorizontal: 16,

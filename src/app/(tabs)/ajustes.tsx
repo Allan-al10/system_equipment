@@ -16,7 +16,7 @@ import {
   SectionTitle,
 } from '@/components/ui';
 import { colors, radius } from '@/lib/theme';
-import { APP_VERSION, WARRANTY_PRESETS } from '@/lib/constants';
+import { APP_VERSION, DEADLINE_PRESETS, WARRANTY_PRESETS } from '@/lib/constants';
 import { formatPhoneBR, isValidPhoneBR } from '@/lib/format';
 import { exportBackup, parseBackupJson, pickBackupJson } from '@/lib/backup';
 import { confirmAsync } from '@/lib/confirm';
@@ -24,19 +24,19 @@ import { confirmAsync } from '@/lib/confirm';
 const STEPS = [
   {
     title: 'Abra a OS',
-    text: 'Registre o cliente, a impressora e o defeito relatado na entrada.',
+    text: 'Registre o cliente, o equipamento e as anotações do cliente na entrada.',
   },
   {
     title: 'Diagnostique e orce',
-    text: 'Faça os testes e adicione peças e serviços ao orçamento.',
+    text: 'Faça os testes, registre as anotações internas e adicione peças e serviços.',
   },
   {
-    title: 'Aprove e repare',
-    text: 'Registre a aprovação do cliente e descreva o serviço executado.',
+    title: 'Envie e autorize',
+    text: 'Envie o orçamento, registre a resposta do cliente e as soluções do reparo.',
   },
   {
-    title: 'Entregue e acompanhe',
-    text: 'A garantia e todo o histórico do equipamento ficam salvos.',
+    title: 'Pronto e entregue',
+    text: 'Marque como pronto, registre a entrega e acompanhe a garantia. Prazos vencidos e garantias a fazer aparecem em Pendências; OS finalizadas e canceladas ficam em Registros.',
   },
 ];
 
@@ -47,6 +47,7 @@ export default function SettingsScreen() {
     settings.companyName,
     settings.phone,
     String(settings.defaultWarrantyDays),
+    String(settings.defaultDeadlineDays),
   ].join('\u0000');
 
   return <SettingsForm key={formKey} />;
@@ -61,10 +62,12 @@ function SettingsForm() {
   const [company, setCompany] = useState(settings.companyName);
   const [phone, setPhone] = useState(settings.phone);
   const [warranty, setWarranty] = useState(String(settings.defaultWarrantyDays));
+  const [deadline, setDeadline] = useState(String(settings.defaultDeadlineDays));
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const warrantyNumber = Number(warranty.replace(/\D/g, '')) || 0;
+  const deadlineNumber = Number(deadline.replace(/\D/g, '')) || 0;
   const version = Constants.expoConfig?.version ?? APP_VERSION;
 
   const nameError =
@@ -75,7 +78,9 @@ function SettingsForm() {
       : '';
   const warrantyError =
     warrantyNumber > 3650 ? 'A garantia padrão pode ser de no máximo 3650 dias.' : '';
-  const validationErrors = [nameError, phoneError, warrantyError].filter(Boolean);
+  const deadlineError =
+    deadlineNumber > 365 ? 'O prazo padrão pode ser de no máximo 365 dias.' : '';
+  const validationErrors = [nameError, phoneError, warrantyError, deadlineError].filter(Boolean);
   const visibleErrors = submitted ? validationErrors : [];
 
   const handleSave = () => {
@@ -86,13 +91,16 @@ function SettingsForm() {
     }
 
     const days = Math.max(0, Math.min(3650, Math.round(warrantyNumber)));
+    const deadlineDays = Math.max(0, Math.min(365, Math.round(deadlineNumber)));
     updateSettings({
       technicianName: name.trim(),
       companyName: company.trim(),
       phone: formatPhoneBR(phone),
       defaultWarrantyDays: days,
+      defaultDeadlineDays: deadlineDays,
     });
     setWarranty(String(days));
+    setDeadline(String(deadlineDays));
     toast('Ajustes salvos.');
   };
 
@@ -211,6 +219,27 @@ function SettingsForm() {
                   label={days === 0 ? 'Sem garantia' : `${days} dias`}
                   selected={warrantyNumber === days}
                   onPress={() => setWarranty(String(days))}
+                />
+              ))}
+            </View>
+
+            <Field
+              label="Prazo padrão de entrega (dias)"
+              value={deadline}
+              onChangeText={(text) => setDeadline(text.replace(/\D/g, ''))}
+              keyboardType="numeric"
+              placeholder="7"
+              hint="Aplicado ao criar uma nova OS. 0 = sem prazo padrão. Serviços com prazo vencido aparecem em Pendências."
+              error={submitted ? deadlineError : undefined}
+            />
+
+            <View style={styles.presets}>
+              {DEADLINE_PRESETS.map((days) => (
+                <Chip
+                  key={days}
+                  label={days === 0 ? 'Sem prazo' : `${days} dias`}
+                  selected={deadlineNumber === days}
+                  onPress={() => setDeadline(String(days))}
                 />
               ))}
             </View>

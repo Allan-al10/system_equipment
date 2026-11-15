@@ -47,7 +47,57 @@ export function warrantyLabel(order: ServiceOrder): string {
   return `${active ? 'Garantia ativa até' : 'Garantia encerrada em'} ${formatDate(end)}`;
 }
 
-export function orderMatchesQuery(order: ServiceOrder, query: string): boolean {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function isOrderOverdue(order: ServiceOrder, reference = new Date()): boolean {
+  if (!order.dueDate || order.deliveredAt || order.status === 'recusado') return false;
+  const dueDate = new Date(order.dueDate);
+  if (Number.isNaN(dueDate.getTime())) return false;
+  dueDate.setHours(23, 59, 59, 999);
+  return dueDate.getTime() < reference.getTime();
+}
+
+export function overdueDays(order: ServiceOrder, reference = new Date()): number {
+  if (!order.dueDate || !isOrderOverdue(order, reference)) return 0;
+  const dueDate = new Date(order.dueDate);
+  const today = new Date(reference);
+  dueDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.max(1, Math.round((today.getTime() - dueDate.getTime()) / DAY_MS));
+}
+
+export function isOrderPending(order: ServiceOrder, reference = new Date()): boolean {
+  return isOrderOverdue(order, reference) || Boolean(order.warrantyPending);
+}
+
+export interface PendingSummary {
+  overdue: number;
+  warranty: number;
+  total: number;
+}
+
+export function getPendingSummary(orders: ServiceOrder[]): PendingSummary {
+  let overdue = 0;
+  let warranty = 0;
+  let total = 0;
+  const reference = new Date();
+
+  for (const order of orders) {
+    const isOverdue = isOrderOverdue(order, reference);
+    const hasWarrantyPending = Boolean(order.warrantyPending);
+    if (isOverdue) overdue += 1;
+    if (hasWarrantyPending) warranty += 1;
+    if (isOverdue || hasWarrantyPending) total += 1;
+  }
+
+  return { overdue, warranty, total };
+}
+
+export function orderMatchesQuery(
+  order: ServiceOrder,
+  query: string,
+  reference = new Date(),
+): boolean {
   const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) return true;
   const haystack = normalizeText(
@@ -63,6 +113,11 @@ export function orderMatchesQuery(order: ServiceOrder, query: string): boolean {
       order.servicePerformed,
       order.budgetNotes,
       order.internalNotes,
+      order.dueDate ? `prazo ${formatDate(order.dueDate)}` : '',
+      isOrderPending(order, reference) ? 'pendencia pendente' : '',
+      isOrderOverdue(order, reference) ? 'atrasada atrasado' : '',
+      order.warrantyPending ? 'garantia a fazer' : '',
+      order.warrantyPendingNote,
       STATUS_META[order.status].label,
     ].join(' '),
   );
@@ -73,16 +128,63 @@ export function orderMatchesQuery(order: ServiceOrder, query: string): boolean {
 }
 
 export const ORDER_FILTERS = [
-  { key: 'todas', label: 'Todas', statuses: null },
+  { key: 'todas', label: 'Todas', statuses: null, delivered: null, pending: null },
   {
-    key: 'andamento',
-    label: 'Em andamento',
-    statuses: ['recebida', 'em_analise', 'aprovada', 'em_reparo'] as OSStatus[],
+    key: 'pendencias',
+    label: 'Pendências',
+    statuses: null,
+    delivered: null,
+    pending: true,
   },
-  { key: 'aguardando', label: 'Aguardando', statuses: ['aguardando_aprovacao'] as OSStatus[] },
-  { key: 'prontas', label: 'Prontas', statuses: ['concluida'] as OSStatus[] },
-  { key: 'entregues', label: 'Entregues', statuses: ['entregue'] as OSStatus[] },
-  { key: 'canceladas', label: 'Canceladas', statuses: ['cancelada'] as OSStatus[] },
+  {
+    key: 'orcamento',
+    label: 'Orçamento',
+    statuses: ['orcamento'] as OSStatus[],
+    delivered: null,
+    pending: null,
+  },
+  {
+    key: 'orcamento_realizado',
+    label: 'Orç. realizado',
+    statuses: ['orcamento_realizado'] as OSStatus[],
+    delivered: null,
+    pending: null,
+  },
+  {
+    key: 'esperando_resposta',
+    label: 'Esperando resposta',
+    statuses: ['esperando_resposta'] as OSStatus[],
+    delivered: null,
+    pending: null,
+  },
+  {
+    key: 'autorizado',
+    label: 'Autorizado',
+    statuses: ['autorizado'] as OSStatus[],
+    delivered: null,
+    pending: null,
+  },
+  {
+    key: 'pronto',
+    label: 'Pronto',
+    statuses: ['pronto'] as OSStatus[],
+    delivered: false,
+    pending: null,
+  },
+  {
+    key: 'recusado',
+    label: 'Recusado',
+    statuses: ['recusado'] as OSStatus[],
+    delivered: null,
+    pending: null,
+  },
+  {
+    key: 'entregues',
+    label: 'Entregues',
+    statuses: ['pronto'] as OSStatus[],
+    delivered: true,
+    pending: null,
+  },
 ] as const;
 
 export type OrderFilterKey = (typeof ORDER_FILTERS)[number]['key'];
@@ -93,12 +195,26 @@ export function filterOrders(
   query = '',
 ): ServiceOrder[] {
   const definition = ORDER_FILTERS.find((item) => item.key === filter) ?? ORDER_FILTERS[0];
+  const reference = new Date();
   return orders
     .filter((order) => {
       if (definition.statuses && !definition.statuses.includes(order.status)) return false;
-      return orderMatchesQuery(order, query);
+      if (definition.delivered === true && !order.deliveredAt) return false;
+      if (definition.delivered === false && order.deliveredAt) return false;
+      if (definition.pending && !isOrderPending(order, reference)) return false;
+      return orderMatchesQuery(order, query, reference);
     })
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    .sort((a, b) => {
+      if (filter === 'pendencias') {
+        const aOverdue = isOrderOverdue(a, reference);
+        const bOverdue = isOrderOverdue(b, reference);
+        if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+        if (aOverdue && bOverdue) {
+          return new Date(a.dueDate ?? 0).getTime() - new Date(b.dueDate ?? 0).getTime();
+        }
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 }
 
 export function findRelatedOrders(orders: ServiceOrder[], order: ServiceOrder): ServiceOrder[] {

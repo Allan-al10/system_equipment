@@ -17,15 +17,30 @@ import { uid } from './format';
 const STORAGE_KEY = '@tecprint/app-data/v1';
 
 const VALID_STATUSES: OSStatus[] = [
-  'recebida',
-  'em_analise',
-  'aguardando_aprovacao',
-  'aprovada',
-  'em_reparo',
-  'concluida',
-  'entregue',
-  'cancelada',
+  'orcamento',
+  'orcamento_realizado',
+  'esperando_resposta',
+  'autorizado',
+  'pronto',
+  'recusado',
 ];
+
+const LEGACY_STATUS_MAP: Record<string, OSStatus> = {
+  recebida: 'orcamento',
+  em_analise: 'orcamento',
+  aguardando_aprovacao: 'esperando_resposta',
+  aprovada: 'autorizado',
+  em_reparo: 'autorizado',
+  concluida: 'pronto',
+  entregue: 'pronto',
+  cancelada: 'recusado',
+};
+
+function normalizeStatus(value: unknown): OSStatus {
+  if (typeof value !== 'string') return 'orcamento';
+  if (VALID_STATUSES.includes(value as OSStatus)) return value as OSStatus;
+  return LEGACY_STATUS_MAP[value] ?? 'orcamento';
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -86,9 +101,7 @@ function normalizeOrder(value: unknown): ServiceOrder | null {
 
   if (!clientName && !brand && !model && !number) return null;
 
-  const status = VALID_STATUSES.includes(value.status as OSStatus)
-    ? (value.status as OSStatus)
-    : 'recebida';
+  const status = normalizeStatus(value.status);
 
   const accessories = Array.isArray(value.accessories)
     ? value.accessories.filter((item): item is string => typeof item === 'string')
@@ -125,9 +138,13 @@ function normalizeOrder(value: unknown): ServiceOrder | null {
     servicePerformed: asString(value.servicePerformed),
     internalNotes: asString(value.internalNotes),
     warrantyDays: Math.max(0, Math.round(asNumber(value.warrantyDays, 90))),
+    dueDate: asOptionalIso(value.dueDate),
+    warrantyPending: value.warrantyPending === true,
+    warrantyPendingNote: asString(value.warrantyPendingNote),
     approvedAt: asOptionalIso(value.approvedAt),
     completedAt: asOptionalIso(value.completedAt),
     deliveredAt: asOptionalIso(value.deliveredAt),
+    canceledAt: asOptionalIso(value.canceledAt),
     history,
   };
 }
@@ -166,6 +183,13 @@ function normalizeSettings(value: unknown): Settings {
     defaultWarrantyDays: Math.max(
       0,
       Math.round(asNumber(source.defaultWarrantyDays, DEFAULT_SETTINGS.defaultWarrantyDays)),
+    ),
+    defaultDeadlineDays: Math.max(
+      0,
+      Math.min(
+        365,
+        Math.round(asNumber(source.defaultDeadlineDays, DEFAULT_SETTINGS.defaultDeadlineDays)),
+      ),
     ),
   };
 }

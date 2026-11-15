@@ -76,6 +76,24 @@ Para checar se as dependências continuam compatíveis com o SDK:
 npx expo install --check
 ```
 
+## Pendências
+
+O app reúne em **Pendências** dois tipos de acompanhamento:
+
+- **Serviços atrasados:** toda OS com prazo de entrega vencido, ainda não entregue e não recusada.
+- **Garantias a fazer:** marcação manual no detalhe da OS para retornos e serviços em garantia pendentes.
+
+O prazo padrão de novas OS é definido em **Ajustes** (0 desativa o prazo automático) e pode ser ajustado em cada OS. O filtro **Pendências** fica disponível na lista de ordens, e o Início mostra um resumo com a quantidade de atrasos e garantias a fazer.
+
+## Registros
+
+A aba **Registros** guarda a consulta das OS que chegaram ao fim do fluxo, com uma ficha somente leitura contendo cliente, equipamento, defeito, diagnóstico, orçamento, serviço realizado, garantia, datas e histórico completo.
+
+- **Finalizada:** OS com status **Pronto**. O registro mostra também se o equipamento já foi entregue ou se está aguardando entrega.
+- **Cancelada:** OS com status **Recusado**, com a data de cancelamento registrada.
+
+A lista permite buscar por cliente, equipamento, número da OS ou serviço e filtrar entre **Todos**, **Finalizados** e **Cancelados**. O botão **Ver registro** no detalhe de uma OS finalizada ou cancelada abre a mesma ficha. Para alterar dados ou registrar a entrega, use **Abrir OS original** dentro do registro.
+
 ## Estrutura
 
 - `src/app/` — rotas do Expo Router (telas e layouts)

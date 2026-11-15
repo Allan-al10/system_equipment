@@ -16,11 +16,11 @@ import { useToast } from '@/components/Toast';
 import { Button, Card, Chip, Field, FormAlert, ScreenHeader, SectionTitle } from '@/components/ui';
 import { colors } from '@/lib/theme';
 import { ACCESSORY_OPTIONS } from '@/lib/constants';
-import { formatDate, formatPhoneBR, isValidPhoneBR } from '@/lib/format';
+import { addDays, formatDate, formatPhoneBR, isValidPhoneBR } from '@/lib/format';
 import { nextOSNumber } from '@/lib/os-utils';
 
 export default function NewOrderScreen() {
-  const { orders, createOrder } = useData();
+  const { orders, settings, createOrder } = useData();
   const toast = useToast();
   const insets = useSafeAreaInsets();
 
@@ -32,9 +32,15 @@ export default function NewOrderScreen() {
   const [accessories, setAccessories] = useState<string[]>([]);
   const [reportedDefect, setReportedDefect] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
+  const [servicePerformed, setServicePerformed] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const previewNumber = useMemo(() => nextOSNumber(orders), [orders]);
+  const defaultDeadlineDays = Math.max(0, Math.round(settings.defaultDeadlineDays));
+  const deadlinePreview =
+    defaultDeadlineDays > 0
+      ? formatDate(addDays(new Date().toISOString(), defaultDeadlineDays))
+      : null;
   const errorMessages = Object.values(errors);
 
   const goBack = () => {
@@ -69,7 +75,7 @@ export default function NewOrderScreen() {
     if (!brand.trim()) nextErrors.brand = 'Informe a marca da impressora.';
     if (!model.trim()) nextErrors.model = 'Informe o modelo da impressora.';
     if (!reportedDefect.trim()) {
-      nextErrors.reportedDefect = 'Descreva o defeito relatado pelo cliente.';
+      nextErrors.reportedDefect = 'Preencha as anotações do cliente.';
     }
 
     setErrors(nextErrors);
@@ -87,6 +93,7 @@ export default function NewOrderScreen() {
       accessories,
       reportedDefect,
       internalNotes,
+      servicePerformed,
     });
 
     toast(`OS ${order.number} criada.`);
@@ -97,7 +104,7 @@ export default function NewOrderScreen() {
     <View style={styles.screen}>
       <ScreenHeader
         title="Nova OS"
-        subtitle="Entrada de impressora na assistência"
+        subtitle="Cadastro do equipamento e abertura da OS"
         onBack={goBack}
       />
 
@@ -117,7 +124,12 @@ export default function NewOrderScreen() {
             <View style={styles.flex}>
               <Text style={styles.introTitle}>{previewNumber}</Text>
               <Text style={styles.introText}>
-                Entrada em {formatDate(new Date().toISOString())} • status inicial Recebida
+                Entrada em {formatDate(new Date().toISOString())} • status inicial Orçamento
+              </Text>
+              <Text style={styles.introText}>
+                {deadlinePreview
+                  ? `Prazo padrão de entrega: ${deadlinePreview}`
+                  : 'Sem prazo padrão de entrega definido.'}
               </Text>
             </View>
           </Card>
@@ -153,7 +165,11 @@ export default function NewOrderScreen() {
           </Card>
 
           <Card>
-            <SectionTitle title="Impressora" icon="print-outline" />
+            <SectionTitle
+              title="Equipamento"
+              subtitle="Dados da impressora que entrou na assistência."
+              icon="print-outline"
+            />
             <View style={styles.spacer} />
             <View style={styles.row}>
               <Field
@@ -207,30 +223,39 @@ export default function NewOrderScreen() {
 
           <Card>
             <SectionTitle
-              title="Defeito relatado"
-              subtitle="Use as palavras do cliente; complemente no diagnóstico."
-              icon="alert-circle-outline"
+              title="Anotações do equipamento"
+              subtitle="Relato do cliente, provável defeito e solução aplicada."
+              icon="document-text-outline"
             />
             <View style={styles.spacer} />
             <Field
-              label="O que o cliente relatou"
+              label="Anotações do cliente"
               required
               value={reportedDefect}
               onChangeText={(text) => {
                 setReportedDefect(text);
                 clearError('reportedDefect');
               }}
-              placeholder="Ex.: luzes piscando, não conecta no Wi-Fi, scanner sai com faixa..."
+              placeholder="Ex.: cliente relata luzes piscando e acha que é problema de Wi-Fi..."
+              hint="Defeito ou possível defeito na visão do cliente."
               multiline
               error={errors.reportedDefect}
             />
             <Field
-              label="Observações internas"
+              label="Anotações internas"
               value={internalNotes}
               onChangeText={setInternalNotes}
-              placeholder="Ex.: cliente autorizou contato apenas à tarde..."
+              placeholder="Ex.: provável fonte com defeito; testar fusível e placa..."
+              hint="Provável defeito identificado por você. Visível apenas internamente."
               multiline
-              hint="Visível apenas para você."
+            />
+            <Field
+              label="Soluções"
+              value={servicePerformed}
+              onChangeText={setServicePerformed}
+              placeholder="Ex.: troca do rolete de tração, limpeza do cabeçote e reset de rede..."
+              hint="Serviço realizado para corrigir o equipamento. Pode ser preenchido depois."
+              multiline
               containerStyle={styles.lastField}
             />
           </Card>

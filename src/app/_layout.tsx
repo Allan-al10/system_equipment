@@ -23,6 +23,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="nova-os" options={{ presentation: 'modal' }} />
             <Stack.Screen name="os/[id]" />
+            <Stack.Screen name="registro/[id]" />
             <Stack.Screen name="defeito/[id]" />
             <Stack.Screen name="defeito-form" options={{ presentation: 'modal' }} />
           </Stack>

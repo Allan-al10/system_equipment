@@ -23,7 +23,7 @@ import type {
   Settings,
 } from './types';
 import { colors, STATUS_META } from './theme';
-import { formatCurrency, uid } from './format';
+import { addDays, formatCurrency, uid } from './format';
 import { itemTotal, nextOSNumber } from './os-utils';
 import { createInitialData } from './seed';
 import { loadAppData, normalizeAppData, saveAppData } from './storage';
@@ -92,12 +92,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const createOrder = useCallback(
     (input: NewOrderInput): ServiceOrder => {
       const now = new Date().toISOString();
+      const deadlineDays = Math.max(
+        0,
+        Math.round(dataRef.current.settings.defaultDeadlineDays),
+      );
       const order: ServiceOrder = {
         id: uid('os_'),
         number: nextOSNumber(dataRef.current.orders),
         createdAt: now,
         updatedAt: now,
-        status: 'recebida',
+        status: 'orcamento',
         clientName: input.clientName.trim(),
         clientPhone: input.clientPhone.trim(),
         brand: input.brand.trim(),
@@ -108,15 +112,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         diagnosis: '',
         budgetItems: [],
         budgetNotes: '',
-        servicePerformed: '',
+        servicePerformed: input.servicePerformed.trim(),
         internalNotes: input.internalNotes.trim(),
         warrantyDays: dataRef.current.settings.defaultWarrantyDays,
+        dueDate: deadlineDays > 0 ? addDays(now, deadlineDays) : undefined,
+        warrantyPending: false,
+        warrantyPendingNote: '',
         history: [
           {
             id: uid('h_'),
             at: now,
             title: 'OS aberta',
-            detail: 'Equipamento registrado com status Recebida.',
+            detail: 'Equipamento registrado com status Orçamento.',
           },
         ],
       };
@@ -154,14 +161,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const now = new Date().toISOString();
       const patch: OrderPatch = { status };
 
-      if (status === 'aprovada' && !current.approvedAt) patch.approvedAt = now;
-      if (status === 'concluida' && !current.completedAt) patch.completedAt = now;
-      if (status === 'entregue' && !current.deliveredAt) patch.deliveredAt = now;
+      if (status === 'autorizado' && !current.approvedAt) patch.approvedAt = now;
+      if (status === 'pronto') patch.completedAt = now;
+      if (status === 'recusado') patch.canceledAt = now;
+      else if (current.status === 'recusado') patch.canceledAt = undefined;
+
+      const title =
+        status === 'pronto'
+          ? 'OS finalizada'
+          : status === 'recusado'
+            ? 'OS cancelada'
+            : `Status: ${STATUS_META[status].label}`;
 
       updateOrder(id, patch, {
         id: uid('h_'),
         at: now,
-        title: `Status: ${STATUS_META[status].label}`,
+        title,
         detail: `De "${STATUS_META[current.status].label}" para "${STATUS_META[status].label}".`,
       });
     },
@@ -329,6 +344,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           0,
           Math.round(
             Number.isFinite(merged.defaultWarrantyDays) ? merged.defaultWarrantyDays : 90,
+          ),
+        );
+        merged.defaultDeadlineDays = Math.max(
+          0,
+          Math.min(
+            365,
+            Math.round(
+              Number.isFinite(merged.defaultDeadlineDays) ? merged.defaultDeadlineDays : 7,
+            ),
           ),
         );
         return { ...previous, settings: merged };

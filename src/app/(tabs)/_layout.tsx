@@ -44,6 +44,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="registros"
+        options={{
+          title: 'Registros',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'archive' : 'archive-outline'}
+              size={22}
+              color={color as string}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="defeitos"
         options={{
           title: 'Defeitos',

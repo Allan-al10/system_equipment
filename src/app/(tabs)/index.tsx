@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 
 import { useData } from '@/lib/data-context';
-import { colors, radius, shadows } from '@/lib/theme';
+import { ALL_STATUSES, colors, radius, shadows, STATUS_META } from '@/lib/theme';
 import { formatLongDate } from '@/lib/format';
-import { isWarrantyActive } from '@/lib/os-utils';
+import { getPendingSummary, isWarrantyActive } from '@/lib/os-utils';
+import type { OSStatus } from '@/lib/types';
 import { OrderCard } from '@/components/OrderCard';
 import {
   Button,
@@ -25,16 +26,26 @@ export default function HomeScreen() {
   const greeting = firstName ? `Olá, ${firstName}` : 'Olá, técnico';
 
   const stats = useMemo(() => {
-    const inProgress = orders.filter((order) =>
-      ['recebida', 'em_analise', 'aprovada', 'em_reparo'].includes(order.status),
-    ).length;
-    const awaiting = orders.filter((order) => order.status === 'aguardando_aprovacao').length;
-    const ready = orders.filter((order) => order.status === 'concluida').length;
-    const warranties = orders.filter(
-      (order) => order.status === 'entregue' && isWarrantyActive(order),
-    ).length;
+    const situationCounts = ALL_STATUSES.reduce(
+      (counts, status) => {
+        counts[status] = 0;
+        return counts;
+      },
+      {} as Record<OSStatus, number>,
+    );
 
-    return { inProgress, awaiting, ready, warranties };
+    for (const order of orders) {
+      if (order.status === 'pronto' && order.deliveredAt) continue;
+      situationCounts[order.status] += 1;
+    }
+
+    const active = orders.filter(
+      (order) => order.status !== 'recusado' && !order.deliveredAt,
+    ).length;
+    const delivered = orders.filter((order) => Boolean(order.deliveredAt)).length;
+    const warranties = orders.filter((order) => isWarrantyActive(order)).length;
+
+    return { situationCounts, active, delivered, warranties };
   }, [orders]);
 
   const recentOrders = useMemo(
@@ -44,6 +55,8 @@ export default function HomeScreen() {
         .slice(0, 4),
     [orders],
   );
+
+  const pending = useMemo(() => getPendingSummary(orders), [orders]);
 
   return (
     <View style={styles.screen}>
@@ -76,11 +89,11 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text style={styles.heroLabel}>OS EM ANDAMENTO</Text>
+          <Text style={styles.heroLabel}>OS NA OFICINA</Text>
           <View style={styles.heroNumberRow}>
-            <Text style={styles.heroNumber}>{stats.inProgress}</Text>
+            <Text style={styles.heroNumber}>{stats.active}</Text>
             <Text style={styles.heroNumberHint}>
-              {stats.inProgress === 1 ? 'ordem na oficina' : 'ordens na oficina'}
+              {stats.active === 1 ? 'ordem na oficina' : 'ordens na oficina'}
             </Text>
           </View>
 
@@ -102,32 +115,96 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={styles.statsRow}>
-          <StatCard
-            icon="time-outline"
-            value={stats.awaiting}
-            label="Aguardando aprovação"
-            color={colors.orange}
-            backgroundColor={colors.orangeSoft}
-            onPress={() => router.push({ pathname: '/ordens', params: { filter: 'aguardando' } })}
-          />
-          <StatCard
-            icon="checkmark-done-outline"
-            value={stats.ready}
-            label="Prontas p/ entrega"
-            color={colors.success}
-            backgroundColor={colors.successSoft}
-            onPress={() => router.push({ pathname: '/ordens', params: { filter: 'prontas' } })}
-          />
-          <StatCard
-            icon="shield-checkmark-outline"
-            value={stats.warranties}
-            label="Garantias ativas"
-            color={colors.primary}
-            backgroundColor={colors.primarySoft}
-            onPress={() => router.push({ pathname: '/ordens', params: { filter: 'entregues' } })}
+        <View style={styles.sectionHeader}>
+          <SectionTitle
+            title="Situação das OS"
+            subtitle="Toque em uma situação para filtrar"
           />
         </View>
+
+        <View style={styles.situationGrid}>
+          {[ALL_STATUSES.slice(0, 3), ALL_STATUSES.slice(3)].map((row) => (
+            <View key={row[0]} style={styles.statsRow}>
+              {row.map((status) => {
+                const meta = STATUS_META[status];
+                return (
+                  <StatCard
+                    key={status}
+                    icon={meta.icon}
+                    value={stats.situationCounts[status]}
+                    label={meta.label}
+                    color={meta.color}
+                    backgroundColor={meta.bg}
+                    onPress={() =>
+                      router.push({ pathname: '/ordens', params: { filter: status } })
+                    }
+                  />
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${pending.overdue} serviços atrasados e ${pending.warranty} garantias a fazer`}
+          onPress={() => router.push({ pathname: '/ordens', params: { filter: 'pendencias' } })}
+          style={({ pressed }) => [
+            styles.pendingCard,
+            pending.total > 0 ? styles.pendingCardActive : styles.pendingCardClear,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.pendingIcon}>
+            <Ionicons
+              name={pending.total > 0 ? 'alert-circle-outline' : 'checkmark-done-outline'}
+              size={20}
+              color={pending.total > 0 ? colors.warning : colors.success}
+            />
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.pendingTitle}>
+              {pending.total === 0
+                ? 'Tudo em dia'
+                : `${pending.total} ${pending.total === 1 ? 'pendência' : 'pendências'}`}
+            </Text>
+            <Text style={styles.pendingText}>
+              {pending.overdue > 0
+                ? `${pending.overdue} ${
+                    pending.overdue === 1 ? 'serviço atrasado' : 'serviços atrasados'
+                  }`
+                : 'Nenhum serviço atrasado'}
+              {' • '}
+              {pending.warranty > 0
+                ? `${pending.warranty} ${
+                    pending.warranty === 1 ? 'garantia a fazer' : 'garantias a fazer'
+                  }`
+                : 'Nenhuma garantia a fazer'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.borderStrong} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${stats.warranties} garantias ativas e ${stats.delivered} equipamentos entregues`}
+          onPress={() => router.push({ pathname: '/ordens', params: { filter: 'entregues' } })}
+          style={({ pressed }) => [styles.deliveredCard, pressed && styles.pressed]}
+        >
+          <View style={styles.deliveredIcon}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.deliveredTitle}>
+              {stats.warranties} {stats.warranties === 1 ? 'garantia ativa' : 'garantias ativas'}
+            </Text>
+            <Text style={styles.deliveredText}>
+              {stats.delivered}{' '}
+              {stats.delivered === 1 ? 'equipamento entregue' : 'equipamentos entregues'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.borderStrong} />
+        </Pressable>
 
         <View style={styles.sectionHeader}>
           <SectionTitle title="Ordens recentes" subtitle="Últimas atualizações da oficina" />
@@ -169,8 +246,8 @@ export default function HomeScreen() {
           <View style={styles.flex}>
             <Text style={styles.tipTitle}>Garantia sem dor de cabeça</Text>
             <Text style={styles.tipText}>
-              Registre o nº de série e o serviço executado. Se a impressora voltar, todo o
-              histórico dela estará aqui.
+              Registre o nº de série e as soluções do reparo. Se o equipamento voltar, todo o
+              histórico dele estará aqui.
             </Text>
           </View>
         </Card>
@@ -282,6 +359,74 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  situationGrid: {
+    gap: 10,
+  },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: 12,
+  },
+  pendingCardActive: {
+    backgroundColor: colors.warningSoft,
+    borderColor: '#FDE68A',
+  },
+  pendingCardClear: {
+    backgroundColor: colors.successSoft,
+    borderColor: '#BBF7D0',
+  },
+  pendingIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  pendingText: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  deliveredCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.successSoft,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: radius.md,
+    padding: 12,
+  },
+  deliveredIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deliveredTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  deliveredText: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  pressed: {
+    opacity: 0.86,
   },
   sectionHeader: {
     flexDirection: 'row',

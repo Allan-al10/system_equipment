@@ -87,89 +87,71 @@ export interface StatusMeta {
 }
 
 export const STATUS_META: Record<OSStatus, StatusMeta> = {
-  recebida: {
-    label: 'Recebida',
-    shortLabel: 'Recebida',
+  orcamento: {
+    label: 'Orçamento',
+    shortLabel: 'Orçamento',
     color: colors.primary,
     bg: colors.primarySoft,
-    icon: 'download-outline',
-    description: 'Equipamento registrado e aguardando o início dos testes.',
+    icon: 'calculator-outline',
+    description: 'Equipamento registrado. Prepare o diagnóstico e o orçamento.',
   },
-  em_analise: {
-    label: 'Em análise',
-    shortLabel: 'Em análise',
-    color: colors.warning,
-    bg: colors.warningSoft,
-    icon: 'search-outline',
-    description: 'Testes e diagnóstico do equipamento em andamento.',
+  orcamento_realizado: {
+    label: 'Orçamento realizado',
+    shortLabel: 'Orç. realizado',
+    color: colors.accent,
+    bg: colors.accentSoft,
+    icon: 'document-text-outline',
+    description: 'Peças e serviços orçados. Revise e envie ao cliente.',
   },
-  aguardando_aprovacao: {
-    label: 'Aguardando aprovação',
-    shortLabel: 'Aguard. aprovação',
+  esperando_resposta: {
+    label: 'Esperando resposta',
+    shortLabel: 'Esperando',
     color: colors.orange,
     bg: colors.orangeSoft,
     icon: 'time-outline',
     description: 'Orçamento enviado. Aguardando a resposta do cliente.',
   },
-  aprovada: {
-    label: 'Aprovada',
-    shortLabel: 'Aprovada',
+  autorizado: {
+    label: 'Autorizado',
+    shortLabel: 'Autorizado',
     color: colors.teal,
     bg: colors.tealSoft,
     icon: 'checkmark-circle-outline',
-    description: 'Cliente aprovou o orçamento. Serviço liberado.',
+    description: 'Cliente autorizou o serviço. Reparo liberado.',
   },
-  em_reparo: {
-    label: 'Em reparo',
-    shortLabel: 'Em reparo',
-    color: colors.accent,
-    bg: colors.accentSoft,
-    icon: 'construct-outline',
-    description: 'Serviço aprovado e em execução.',
-  },
-  concluida: {
-    label: 'Concluída',
-    shortLabel: 'Concluída',
+  pronto: {
+    label: 'Pronto',
+    shortLabel: 'Pronto',
     color: colors.success,
     bg: colors.successSoft,
     icon: 'checkmark-done-outline',
-    description: 'Serviço finalizado e pronto para entrega.',
+    description: 'Serviço concluído. Equipamento pronto para entrega.',
   },
-  entregue: {
-    label: 'Entregue',
-    shortLabel: 'Entregue',
-    color: colors.slate,
-    bg: colors.slateSoft,
-    icon: 'bag-check-outline',
-    description: 'Equipamento devolvido ao cliente.',
-  },
-  cancelada: {
-    label: 'Cancelada',
-    shortLabel: 'Cancelada',
+  recusado: {
+    label: 'Recusado',
+    shortLabel: 'Recusado',
     color: colors.danger,
     bg: colors.dangerSoft,
     icon: 'close-circle-outline',
-    description: 'OS cancelada ou orçamento recusado pelo cliente.',
+    description: 'Orçamento recusado pelo cliente.',
   },
 };
 
 export const STATUS_FLOW: OSStatus[] = [
-  'recebida',
-  'em_analise',
-  'aguardando_aprovacao',
-  'aprovada',
-  'em_reparo',
-  'concluida',
-  'entregue',
+  'orcamento',
+  'orcamento_realizado',
+  'esperando_resposta',
+  'autorizado',
+  'pronto',
 ];
 
+export const ALL_STATUSES: OSStatus[] = [...STATUS_FLOW, 'recusado'];
+
 export const NEXT_ACTION_LABEL: Partial<Record<OSStatus, string>> = {
-  em_analise: 'Iniciar análise',
-  aguardando_aprovacao: 'Solicitar aprovação',
-  aprovada: 'Aprovar orçamento',
-  em_reparo: 'Iniciar reparo',
-  concluida: 'Concluir serviço',
-  entregue: 'Registrar entrega',
+  orcamento_realizado: 'Finalizar orçamento',
+  esperando_resposta: 'Enviar ao cliente',
+  autorizado: 'Registrar autorização',
+  pronto: 'Concluir serviço',
 };
 
 export function getNextStatus(status: OSStatus): OSStatus | null {
