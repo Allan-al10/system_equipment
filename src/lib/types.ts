@@ -44,6 +44,7 @@ export interface ServiceOrder {
   status: OSStatus;
   clientName: string;
   clientPhone: string;
+  clientAddress: string;
   brand: string;
   model: string;
   serial: string;
@@ -71,6 +72,7 @@ export type OrderPatch = Partial<
     | 'status'
     | 'clientName'
     | 'clientPhone'
+    | 'clientAddress'
     | 'brand'
     | 'model'
     | 'serial'
@@ -94,6 +96,7 @@ export type OrderPatch = Partial<
 export interface NewOrderInput {
   clientName: string;
   clientPhone: string;
+  clientAddress: string;
   brand: string;
   model: string;
   serial: string;
@@ -136,7 +139,7 @@ export interface AppData {
 }
 
 export interface BackupPayload {
-  app: 'TecPrint';
+  app: 'TecInfo';
   version: 1;
   exportedAt: string;
   data: AppData;

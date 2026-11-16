@@ -8,12 +8,12 @@ export type ExportBackupResult = 'shared' | 'downloaded' | 'unavailable';
 
 export function backupFilename(date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, '0');
-  return `tecprint-backup-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`;
+  return `tecinfo-backup-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`;
 }
 
 export function serializeBackup(data: AppData): string {
   const payload: BackupPayload = {
-    app: 'TecPrint',
+    app: 'TecInfo',
     version: 1,
     exportedAt: new Date().toISOString(),
     data,
@@ -34,11 +34,11 @@ export function parseBackupJson(raw: string): AppData {
       ? (parsed as Record<string, unknown>)
       : null;
   const candidate = wrapper && 'data' in wrapper ? wrapper.data : parsed;
-  const hasMarker = wrapper?.app === 'TecPrint';
+  const hasMarker = wrapper?.app === 'TecInfo';
   const data = normalizeAppData(candidate);
 
   if (!hasMarker && data.orders.length === 0 && data.defects.length === 0) {
-    throw new Error('Este arquivo não parece ser um backup do TecPrint.');
+    throw new Error('Este arquivo não parece ser um backup do TecInfo.');
   }
 
   return data;
@@ -71,7 +71,7 @@ export async function exportBackup(data: AppData): Promise<ExportBackupResult> {
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(file.uri, {
       mimeType: 'application/json',
-      dialogTitle: 'Salvar backup do TecPrint',
+      dialogTitle: 'Salvar backup do TecInfo',
       UTI: 'public.json',
     });
     return 'shared';

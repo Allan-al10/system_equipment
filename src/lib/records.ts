@@ -2,17 +2,19 @@ import type { ServiceOrder } from './types';
 import { orderMatchesQuery } from './os-utils';
 
 export type RecordKind = 'finalizado' | 'cancelado';
-export type RecordFilterKey = 'todos' | 'finalizados' | 'cancelados';
+export type RecordFilterKey = 'todos' | 'entregues' | 'aguardando' | 'cancelados';
 
 export interface OrderRecord {
   order: ServiceOrder;
   kind: RecordKind;
+  delivered: boolean;
   at: string;
 }
 
 export interface RecordSummary {
   total: number;
-  finalized: number;
+  delivered: number;
+  awaitingDelivery: number;
   canceled: number;
 }
 
@@ -22,13 +24,14 @@ export function getRecordKind(order: ServiceOrder): RecordKind | null {
   return null;
 }
 
-export function getRecordKindLabel(kind: RecordKind): string {
-  return kind === 'finalizado' ? 'Finalizada' : 'Cancelada';
+export function getRecordLabel(record: OrderRecord): string {
+  if (record.kind === 'cancelado') return 'Cancelada';
+  return record.delivered ? 'Entregue' : 'Aguardando entrega';
 }
 
 function recordDateForKind(order: ServiceOrder, kind: RecordKind): string {
   if (kind === 'cancelado') return order.canceledAt ?? order.updatedAt;
-  return order.completedAt ?? order.deliveredAt ?? order.updatedAt;
+  return order.deliveredAt ?? order.completedAt ?? order.updatedAt;
 }
 
 export function getRecordDate(order: ServiceOrder): string | null {
@@ -39,7 +42,13 @@ export function getRecordDate(order: ServiceOrder): string | null {
 export function getOrderRecord(order: ServiceOrder): OrderRecord | null {
   const kind = getRecordKind(order);
   if (!kind) return null;
-  return { order, kind, at: recordDateForKind(order, kind) };
+
+  return {
+    order,
+    kind,
+    delivered: kind === 'finalizado' && Boolean(order.deliveredAt),
+    at: recordDateForKind(order, kind),
+  };
 }
 
 export function getOrderRecords(orders: ServiceOrder[]): OrderRecord[] {
@@ -50,15 +59,26 @@ export function getOrderRecords(orders: ServiceOrder[]): OrderRecord[] {
 }
 
 export function getRecordSummary(records: OrderRecord[]): RecordSummary {
-  let finalized = 0;
+  let delivered = 0;
+  let awaitingDelivery = 0;
   let canceled = 0;
 
   for (const record of records) {
-    if (record.kind === 'finalizado') finalized += 1;
-    else canceled += 1;
+    if (record.kind === 'cancelado') {
+      canceled += 1;
+    } else if (record.delivered) {
+      delivered += 1;
+    } else {
+      awaitingDelivery += 1;
+    }
   }
 
-  return { total: records.length, finalized, canceled };
+  return {
+    total: records.length,
+    delivered,
+    awaitingDelivery,
+    canceled,
+  };
 }
 
 export function filterRecords(
@@ -67,8 +87,20 @@ export function filterRecords(
   query: string,
 ): OrderRecord[] {
   return records.filter((record) => {
-    if (filter === 'finalizados' && record.kind !== 'finalizado') return false;
+    if (filter === 'entregues' && !record.delivered) return false;
+    if (filter === 'aguardando' && (record.kind !== 'finalizado' || record.delivered)) {
+      return false;
+    }
     if (filter === 'cancelados' && record.kind !== 'cancelado') return false;
     return orderMatchesQuery(record.order, query);
   });
+}
+
+export function isRecordFilterKey(value: string | undefined): value is RecordFilterKey {
+  return (
+    value === 'todos' ||
+    value === 'entregues' ||
+    value === 'aguardando' ||
+    value === 'cancelados'
+  );
 }

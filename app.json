@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "TecPrint",
-    "slug": "tecprint",
-    "scheme": "tecprint",
+    "name": "TecInfo",
+    "slug": "tecinfo",
+    "scheme": "tecinfo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,10 +10,10 @@
     "backgroundColor": "#F3F6FB",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tecprint.app"
+      "bundleIdentifier": "com.tecinfo.app"
     },
     "android": {
-      "package": "com.tecprint.app",
+      "package": "com.tecinfo.app",
       "adaptiveIcon": {
         "backgroundColor": "#1D4ED8",
         "foregroundImage": "./assets/android-icon-foreground.png",

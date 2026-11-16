@@ -3,27 +3,54 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 
-import type { OrderRecord } from '@/lib/records';
-import { getRecordKindLabel } from '@/lib/records';
+import { getRecordLabel, type OrderRecord } from '@/lib/records';
 import { colors, radius, shadows } from '@/lib/theme';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { orderTotal } from '@/lib/os-utils';
+import { getWarrantyEnd, isWarrantyActive, orderTotal } from '@/lib/os-utils';
 import { Tag } from './ui';
 
 export function RecordCard({ record }: { record: OrderRecord }) {
-  const { order, kind, at } = record;
-  const finalized = kind === 'finalizado';
-  const delivered = Boolean(order.deliveredAt);
+  const { order, kind, at, delivered } = record;
+  const canceled = kind === 'cancelado';
+  const stateLabel = getRecordLabel(record);
+  const stateColor = canceled ? colors.danger : delivered ? colors.success : colors.warning;
+  const stateBackground = canceled
+    ? colors.dangerSoft
+    : delivered
+      ? colors.successSoft
+      : colors.warningSoft;
+  const dateLabel = canceled ? 'Cancelada em' : delivered ? 'Entregue em' : 'Pronta em';
   const total = orderTotal(order);
   const description =
     order.servicePerformed.trim() ||
     order.reportedDefect.trim() ||
-    (finalized ? 'Serviço concluído' : 'Orçamento não aprovado');
+    (canceled ? 'Orçamento não aprovado' : 'Serviço concluído');
+
+  const warrantyEnd = delivered ? getWarrantyEnd(order) : null;
+  const warrantyActive = warrantyEnd ? isWarrantyActive(order) : false;
+  const warrantyTag =
+    delivered && order.warrantyDays > 0
+      ? warrantyEnd
+        ? warrantyActive
+          ? `Garantia até ${formatDate(warrantyEnd)}`
+          : 'Garantia encerrada'
+        : 'Garantia começa na entrega'
+      : null;
+  const warrantyColor = warrantyActive
+    ? colors.success
+    : warrantyEnd
+      ? colors.danger
+      : colors.textMuted;
+  const warrantyBackground = warrantyActive
+    ? colors.successSoft
+    : warrantyEnd
+      ? colors.dangerSoft
+      : colors.surfaceMuted;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${getRecordKindLabel(kind)}: ${order.number}`}
+      accessibilityLabel={`${stateLabel}: ${order.number}`}
       onPress={() => router.push({ pathname: '/registro/[id]', params: { id: order.id } })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
@@ -31,14 +58,10 @@ export function RecordCard({ record }: { record: OrderRecord }) {
         <View style={styles.flex}>
           <View style={styles.numberRow}>
             <Text style={styles.number}>{order.number}</Text>
-            <Tag
-              label={getRecordKindLabel(kind)}
-              color={finalized ? colors.success : colors.danger}
-              backgroundColor={finalized ? colors.successSoft : colors.dangerSoft}
-            />
+            <Tag label={stateLabel} color={stateColor} backgroundColor={stateBackground} />
           </View>
           <Text style={styles.date}>
-            {finalized ? 'Finalizada' : 'Cancelada'} em {formatDate(at)}
+            {dateLabel} {formatDate(at)}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.borderStrong} />
@@ -56,7 +79,7 @@ export function RecordCard({ record }: { record: OrderRecord }) {
       <View style={styles.bottomRow}>
         <View style={styles.descriptionWrap}>
           <Ionicons
-            name={finalized ? 'construct-outline' : 'close-circle-outline'}
+            name={canceled ? 'close-circle-outline' : 'construct-outline'}
             size={14}
             color={colors.textMuted}
           />
@@ -67,13 +90,13 @@ export function RecordCard({ record }: { record: OrderRecord }) {
         {total > 0 ? <Text style={styles.total}>{formatCurrency(total)}</Text> : null}
       </View>
 
-      {finalized || order.warrantyPending ? (
+      {warrantyTag || order.warrantyPending ? (
         <View style={styles.tagsRow}>
-          {finalized ? (
+          {warrantyTag ? (
             <Tag
-              label={delivered ? 'Entregue ao cliente' : 'Aguardando entrega'}
-              color={delivered ? colors.slate : colors.warning}
-              backgroundColor={delivered ? colors.slateSoft : colors.warningSoft}
+              label={warrantyTag}
+              color={warrantyColor}
+              backgroundColor={warrantyBackground}
             />
           ) : null}
           {order.warrantyPending ? (

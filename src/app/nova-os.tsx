@@ -26,6 +26,7 @@ export default function NewOrderScreen() {
 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [serial, setSerial] = useState('');
@@ -87,6 +88,7 @@ export default function NewOrderScreen() {
     const order = createOrder({
       clientName,
       clientPhone,
+      clientAddress,
       brand,
       model,
       serial,
@@ -160,6 +162,16 @@ export default function NewOrderScreen() {
               keyboardType="phone-pad"
               hint="Opcional, mas útil para avisar sobre o orçamento."
               error={errors.clientPhone}
+            />
+            <Field
+              label="Endereço para entrega"
+              value={clientAddress}
+              onChangeText={(text) => {
+                setClientAddress(text);
+                clearError('clientAddress');
+              }}
+              placeholder="Ex.: Rua das Flores, 120, Centro, São Paulo - SP"
+              hint="Opcional. Informe para entregar o equipamento ao cliente após o serviço."
               containerStyle={styles.lastField}
             />
           </Card>

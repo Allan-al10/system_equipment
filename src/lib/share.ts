@@ -42,7 +42,7 @@ export async function shareText(message: string, title: string): Promise<ShareRe
 }
 
 export function buildOrderSummary(order: ServiceOrder, settings: Settings): string {
-  const header = settings.companyName.trim() || 'TecPrint';
+  const header = settings.companyName.trim() || 'TecInfo';
   const lines: string[] = [];
 
   lines.push(`*${header}*`);
@@ -58,6 +58,7 @@ export function buildOrderSummary(order: ServiceOrder, settings: Settings): stri
   lines.push('*Cliente*');
   lines.push(order.clientName || 'Não informado');
   if (order.clientPhone.trim()) lines.push(order.clientPhone.trim());
+  if (order.clientAddress.trim()) lines.push(`Endereço: ${order.clientAddress.trim()}`);
 
   lines.push('');
   lines.push('*Equipamento*');
@@ -106,13 +107,13 @@ export function buildOrderSummary(order: ServiceOrder, settings: Settings): stri
   }
 
   lines.push('');
-  lines.push('_Registro gerado pelo TecPrint_');
+  lines.push('_Registro gerado pelo TecInfo_');
 
   return lines.join('\n');
 }
 
 export function buildBudgetText(order: ServiceOrder, settings: Settings): string {
-  const header = settings.companyName.trim() || 'TecPrint';
+  const header = settings.companyName.trim() || 'TecInfo';
   const lines: string[] = [];
 
   lines.push(`*${header}*`);
@@ -144,7 +145,7 @@ export function buildBudgetText(order: ServiceOrder, settings: Settings): string
 
   lines.push('');
   lines.push('Responda esta mensagem para aprovar o orçamento.');
-  lines.push('_Orçamento gerado pelo TecPrint_');
+  lines.push('_Orçamento gerado pelo TecInfo_');
 
   return lines.join('\n');
 }
@@ -173,6 +174,6 @@ export function buildDefectText(defect: DefectEntry): string {
     lines.push(`Tags: ${defect.tags.join(', ')}`);
   }
   lines.push('');
-  lines.push('_Consulta do TecPrint_');
+  lines.push('_Consulta do TecInfo_');
   return lines.join('\n');
 }

@@ -324,7 +324,7 @@ export default function OrderDetailScreen() {
 
     const ok = await confirmAsync(
       'Registrar entrega',
-      'Confirmar a entrega do equipamento ao cliente? A garantia começará a contar a partir de agora.',
+      'Confirmar a entrega do equipamento ao cliente? O serviço será movido para o grupo Entregues e a garantia começará a contar a partir de agora.',
       'Entregar',
     );
     if (!ok) return;
@@ -339,10 +339,11 @@ export default function OrderDetailScreen() {
         id: uid('h_'),
         at: now,
         title: 'Equipamento entregue',
-        detail: 'Garantia iniciada na data da entrega.',
+        detail: 'Garantia iniciada na entrega. Serviço disponível no grupo Entregues em Registros.',
       },
     );
-    toast('Entrega registrada. Garantia iniciada.');  };
+    toast('Entrega registrada. Serviço movido para Entregues e garantia iniciada.');
+  };
 
   const handleManualStatus = async (status: OSStatus) => {
     if (status === order.status) return;
@@ -746,6 +747,14 @@ export default function OrderDetailScreen() {
                   style={styles.flex}
                 />
               </View>
+            ) : null}
+
+            {order.clientAddress.trim() ? (
+              <InfoRow
+                icon="location-outline"
+                label="Endereço para entrega"
+                value={order.clientAddress}
+              />
             ) : null}
 
             <Divider />

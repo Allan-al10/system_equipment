@@ -42,7 +42,9 @@ export default function HomeScreen() {
     const active = orders.filter(
       (order) => order.status !== 'recusado' && !order.deliveredAt,
     ).length;
-    const delivered = orders.filter((order) => Boolean(order.deliveredAt)).length;
+    const delivered = orders.filter(
+      (order) => order.status === 'pronto' && Boolean(order.deliveredAt),
+    ).length;
     const warranties = orders.filter((order) => isWarrantyActive(order)).length;
 
     return { situationCounts, active, delivered, warranties };
@@ -188,7 +190,7 @@ export default function HomeScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${stats.warranties} garantias ativas e ${stats.delivered} equipamentos entregues`}
-          onPress={() => router.push({ pathname: '/ordens', params: { filter: 'entregues' } })}
+          onPress={() => router.push({ pathname: '/registros', params: { filter: 'entregues' } })}
           style={({ pressed }) => [styles.deliveredCard, pressed && styles.pressed]}
         >
           <View style={styles.deliveredIcon}>

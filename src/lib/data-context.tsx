@@ -79,7 +79,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     saveAppData(data).catch((error) => {
-      console.warn('Falha ao salvar os dados do TecPrint.', error);
+      console.warn('Falha ao salvar os dados do TecInfo.', error);
     });
   }, [data, ready]);
 
@@ -104,6 +104,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         status: 'orcamento',
         clientName: input.clientName.trim(),
         clientPhone: input.clientPhone.trim(),
+        clientAddress: input.clientAddress.trim(),
         brand: input.brand.trim(),
         model: input.model.trim(),
         serial: input.serial.trim(),
@@ -421,7 +422,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         <View style={styles.logo}>
           <Ionicons name="print-outline" size={36} color={colors.white} />
         </View>
-        <Text style={styles.brand}>TecPrint</Text>
+        <Text style={styles.brand}>TecInfo</Text>
         <ActivityIndicator color={colors.primary} style={styles.spinner} />
         <Text style={styles.loadingText}>Carregando seus registros...</Text>
       </View>

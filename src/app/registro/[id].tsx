@@ -26,7 +26,7 @@ import {
   orderTotal,
   warrantyLabel,
 } from '@/lib/os-utils';
-import { getOrderRecord, getRecordKindLabel } from '@/lib/records';
+import { getOrderRecord, getRecordLabel } from '@/lib/records';
 import { buildOrderSummary, shareText } from '@/lib/share';
 
 function TextBlock({ label, value }: { label: string; value: string }) {
@@ -91,14 +91,22 @@ export default function RecordDetailScreen() {
     );
   }
 
-  const finalized = record.kind === 'finalizado';
-  const kindLabel = getRecordKindLabel(record.kind);
-  const kindColor = finalized ? colors.success : colors.danger;
-  const kindBg = finalized ? colors.successSoft : colors.dangerSoft;
-  const kindIcon = finalized ? 'checkmark-done-outline' : 'close-circle-outline';
-  const delivered = Boolean(order.deliveredAt);
+  const canceled = record.kind === 'cancelado';
+  const delivered = record.delivered;
+  const kindLabel = getRecordLabel(record);
+  const kindColor = canceled ? colors.danger : delivered ? colors.success : colors.warning;
+  const kindBg = canceled
+    ? colors.dangerSoft
+    : delivered
+      ? colors.successSoft
+      : colors.warningSoft;
+  const kindIcon = canceled
+    ? 'close-circle-outline'
+    : delivered
+      ? 'bag-check-outline'
+      : 'time-outline';
   const total = orderTotal(order);
-  const warrantyApplies = order.status !== 'recusado';
+  const warrantyApplies = !canceled;
   const warrantyEnd = warrantyApplies ? getWarrantyEnd(order) : null;
   const warrantyPeriodText = !warrantyApplies
     ? 'Não se aplica'
@@ -114,21 +122,23 @@ export default function RecordDetailScreen() {
         ? colors.success
         : colors.danger
       : colors.textMuted;
-  const deliveryTagLabel = finalized
-    ? delivered
+  const deliveryTagLabel = canceled
+    ? 'Orçamento recusado'
+    : delivered
       ? 'Entregue ao cliente'
-      : 'Aguardando entrega'
-    : 'Orçamento recusado';
-  const deliveryTagColor = finalized
-    ? delivered
-      ? colors.slate
-      : colors.warning
-    : colors.danger;
-  const deliveryTagBackground = finalized
-    ? delivered
-      ? colors.slateSoft
-      : colors.warningSoft
-    : colors.dangerSoft;
+      : 'Aguardando entrega';
+  const deliveryTagColor = canceled ? colors.danger : delivered ? colors.success : colors.warning;
+  const deliveryTagBackground = canceled
+    ? colors.dangerSoft
+    : delivered
+      ? colors.successSoft
+      : colors.warningSoft;
+  const recordDateLabel = canceled ? 'Cancelada em' : delivered ? 'Entregue em' : 'Pronta em';
+  const heroDescription = canceled
+    ? 'OS encerrada como cancelada. Confira abaixo o registro completo.'
+    : delivered
+      ? 'Serviço concluído e equipamento entregue ao cliente. Registro guardado para retornos e garantias.'
+      : 'Serviço concluído. Equipamento aguardando entrega.';
 
   const handleShare = async () => {
     const result = await shareText(buildOrderSummary(order, settings), `OS ${order.number}`);
@@ -168,13 +178,7 @@ export default function RecordDetailScreen() {
             <StatusBadge status={order.status} compact />
           </View>
 
-          <Text style={styles.heroDescription}>
-            {finalized
-              ? delivered
-                ? 'Serviço concluído e equipamento entregue ao cliente.'
-                : 'Serviço concluído. Equipamento aguardando entrega.'
-              : 'OS encerrada como cancelada. Confira abaixo o registro completo.'}
-          </Text>
+          <Text style={styles.heroDescription}>{heroDescription}</Text>
 
           <View style={styles.tagRow}>
             <Tag
@@ -195,14 +199,14 @@ export default function RecordDetailScreen() {
 
           <InfoRow
             icon="calendar-outline"
-            label={finalized ? 'Finalizada em' : 'Cancelada em'}
+            label={recordDateLabel}
             value={formatDateTime(record.at)}
           />
-          {order.deliveredAt ? (
+          {delivered && order.completedAt ? (
             <InfoRow
-              icon="bag-check-outline"
-              label="Entregue em"
-              value={formatDateTime(order.deliveredAt)}
+              icon="checkmark-done-outline"
+              label="Serviço concluído em"
+              value={formatDateTime(order.completedAt)}
             />
           ) : null}
           <InfoRow
@@ -322,7 +326,11 @@ export default function RecordDetailScreen() {
         </Card>
 
         <Card>
-          <SectionTitle title="Serviço realizado" icon="construct-outline" />
+          <SectionTitle
+            title="Serviço realizado"
+            subtitle="Registro do que foi feito, disponível para retornos e garantia."
+            icon="construct-outline"
+          />
           <View style={styles.cardGap} />
           <TextBlock label="O que foi feito" value={order.servicePerformed} />
         </Card>
@@ -341,7 +349,11 @@ export default function RecordDetailScreen() {
         </Card>
 
         <Card>
-          <SectionTitle title="Garantia" icon="shield-checkmark-outline" />
+          <SectionTitle
+            title="Garantia"
+            subtitle="Consulte o prazo para retornos e serviços em garantia."
+            icon="shield-checkmark-outline"
+          />
           <View style={styles.cardGap} />
           <InfoRow
             icon="shield-checkmark-outline"
@@ -466,7 +478,7 @@ export default function RecordDetailScreen() {
             <Text style={styles.readOnlyTitle}>Visualização somente leitura</Text>
           </View>
           <Text style={styles.readOnlyText}>
-            Este registro reúne as informações da OS finalizada ou cancelada. Para editar
+            Este registro reúne as informações do serviço entregue ou cancelado. Para editar
             dados ou registrar a entrega, abra a OS original.
           </Text>
           <Button

@@ -1,4 +1,4 @@
-# TecPrint
+# TecInfo
 
 Aplicativo de gestão de ordens de serviço para assistência técnica, construído com Expo Router.
 
@@ -87,12 +87,13 @@ O prazo padrão de novas OS é definido em **Ajustes** (0 desativa o prazo autom
 
 ## Registros
 
-A aba **Registros** guarda a consulta das OS que chegaram ao fim do fluxo, com uma ficha somente leitura contendo cliente, equipamento, defeito, diagnóstico, orçamento, serviço realizado, garantia, datas e histórico completo.
+A aba **Registros** reúne o histórico dos serviços que saíram do fluxo ativo, com uma ficha somente leitura contendo cliente, equipamento, defeito, diagnóstico, orçamento, serviço realizado, garantia, datas e histórico completo.
 
-- **Finalizada:** OS com status **Pronto**. O registro mostra também se o equipamento já foi entregue ou se está aguardando entrega.
+- **Entregues:** OS com status **Pronto** e entrega registrada. É o grupo usado para consultar o serviço em retornos e garantias.
+- **Aguardando entrega:** OS com status **Pronto** ainda não entregues. Saem deste grupo e passam para **Entregues** quando a entrega é registrada.
 - **Cancelada:** OS com status **Recusado**, com a data de cancelamento registrada.
 
-A lista permite buscar por cliente, equipamento, número da OS ou serviço e filtrar entre **Todos**, **Finalizados** e **Cancelados**. O botão **Ver registro** no detalhe de uma OS finalizada ou cancelada abre a mesma ficha. Para alterar dados ou registrar a entrega, use **Abrir OS original** dentro do registro.
+A lista permite buscar por cliente, equipamento, número da OS, nº de série ou serviço e filtrar entre **Todos**, **Entregues**, **Aguardando entrega** e **Cancelados**. A busca pelo nº de série ajuda a localizar o histórico do equipamento em retornos e garantias. O botão **Ver registro** no detalhe de uma OS pronta ou cancelada abre a mesma ficha. Para alterar dados ou registrar a entrega, use **Abrir OS original** dentro do registro.
 
 ## Estrutura
 

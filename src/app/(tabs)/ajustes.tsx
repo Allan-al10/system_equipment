@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
+
+import { router } from 'expo-router';
 
 import { useData } from '@/lib/data-context';
 import { useToast } from '@/components/Toast';
@@ -20,6 +22,8 @@ import { APP_VERSION, DEADLINE_PRESETS, WARRANTY_PRESETS } from '@/lib/constants
 import { formatPhoneBR, isValidPhoneBR } from '@/lib/format';
 import { exportBackup, parseBackupJson, pickBackupJson } from '@/lib/backup';
 import { confirmAsync } from '@/lib/confirm';
+import type { User } from '@/lib/auth';
+import { getCurrentUser, isAdmin } from '@/lib/auth';
 
 const STEPS = [
   {
@@ -36,7 +40,7 @@ const STEPS = [
   },
   {
     title: 'Pronto e entregue',
-    text: 'Marque como pronto, registre a entrega e acompanhe a garantia. Prazos vencidos e garantias a fazer aparecem em Pendências; OS finalizadas e canceladas ficam em Registros.',
+    text: 'Marque como pronto, registre a entrega e acompanhe a garantia. A entrega move o serviço para o grupo Entregues em Registros; prazos vencidos e garantias a fazer ficam em Pendências.',
   },
 ];
 
@@ -57,6 +61,15 @@ function SettingsForm() {
   const { orders, defects, settings, updateSettings, replaceData, resetData, getSnapshot } =
     useData();
   const toast = useToast();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      if (user) setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
 
   const [name, setName] = useState(settings.technicianName);
   const [company, setCompany] = useState(settings.companyName);
@@ -191,7 +204,7 @@ function SettingsForm() {
               label="Empresa / assistência"
               value={company}
               onChangeText={setCompany}
-              placeholder="Ex.: TecPrint Assistência"
+              placeholder="Ex.: TecInfo Assistência"
               autoCapitalize="words"
             />
             <Field
@@ -338,7 +351,7 @@ function SettingsForm() {
 
           <Card>
             <SectionTitle
-              title="Sobre o TecPrint"
+              title="Sobre o TecInfo"
               subtitle={`Versão ${version}`}
               icon="information-circle-outline"
             />
@@ -358,6 +371,23 @@ function SettingsForm() {
               </Text>
             </View>
           </Card>
+
+          {isAdmin(currentUser) ? (
+            <Card>
+              <SectionTitle
+                title="Administração"
+                subtitle="Gerenciamento de usuários do sistema"
+                icon="people-outline"
+              />
+              <Button
+                label="Cadastrar funcionário"
+                icon="person-add-outline"
+                onPress={() => router.push('/cadastro-funcionario')}
+                fullWidth
+                style={styles.adminButton}
+              />
+            </Card>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -477,5 +507,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     flex: 1,
     lineHeight: 17,
+  },
+  adminButton: {
+    marginTop: 8,
   },
 });

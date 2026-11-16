@@ -1,4 +1,4 @@
-export const APP_NAME = 'TecPrint';
+export const APP_NAME = 'TecInfo';
 export const APP_VERSION = '1.0.0';
 
 export const ACCESSORY_OPTIONS = [

@@ -14,6 +14,10 @@ export function OrderCard({ order }: { order: ServiceOrder }) {
   const overdue = isOrderOverdue(order);
   const lateDays = overdue ? overdueDays(order) : 0;
   const hasPending = overdue || order.warrantyPending;
+  const delivered = Boolean(order.deliveredAt);
+  const summary = delivered
+    ? order.servicePerformed.trim() || order.reportedDefect.trim() || 'Serviço concluído'
+    : order.reportedDefect.trim() || 'Sem anotações do cliente';
 
   return (
     <Pressable
@@ -64,9 +68,13 @@ export function OrderCard({ order }: { order: ServiceOrder }) {
 
       <View style={styles.bottomRow}>
         <View style={styles.defectWrap}>
-          <Ionicons name="alert-circle-outline" size={14} color={colors.textMuted} />
+          <Ionicons
+            name={delivered ? 'construct-outline' : 'alert-circle-outline'}
+            size={14}
+            color={colors.textMuted}
+          />
           <Text style={styles.defect} numberOfLines={1}>
-            {order.reportedDefect || 'Sem anotações do cliente'}
+            {summary}
           </Text>
         </View>
         {order.deliveredAt ? (

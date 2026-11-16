@@ -14,7 +14,7 @@ import { DEFECT_CATEGORIES } from './types';
 import { createInitialData, DEFAULT_SETTINGS } from './seed';
 import { uid } from './format';
 
-const STORAGE_KEY = '@tecprint/app-data/v1';
+const STORAGE_KEY = '@tecinfo/app-data/v1';
 
 const VALID_STATUSES: OSStatus[] = [
   'orcamento',
@@ -127,6 +127,7 @@ function normalizeOrder(value: unknown): ServiceOrder | null {
     status,
     clientName,
     clientPhone: asString(value.clientPhone),
+    clientAddress: asString(value.clientAddress),
     brand,
     model,
     serial: asString(value.serial),
@@ -215,7 +216,7 @@ export async function loadAppData(): Promise<AppData> {
     if (!raw) return createInitialData();
     return normalizeAppData(JSON.parse(raw));
   } catch (error) {
-    console.warn('Não foi possível carregar os dados do TecPrint.', error);
+    console.warn('Não foi possível carregar os dados do TecInfo.', error);
     return createInitialData();
   }
 }
