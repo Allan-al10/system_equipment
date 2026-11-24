@@ -1,41 +1,39 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+This is a .NET 10 solution written in C#. Prioritize mobile-first patterns (web for celular), performance, and cross-platform compatibility.
 
-## Expo has changed — do not trust your training data
+## Solution Structure
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
-
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
-
-## Commands
-
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
-
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
-
-Run lint and typecheck before declaring any task done.
-
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
+- `TecPrint.slnx` — solution file (.NET 10)
+- `TecPrint.Api/` — ASP.NET Core Web API (back-end compartilhado, SQL Server local)
+- `TecPrint.Web/` — ASP.NET Core MVC (acesso pelo navegador do celular/tablet)
+- `TecPrint.Desktop/` — WPF (.exe para Windows local)
 
 ## Rules
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+- The app is **no longer Expo/React Native**. Do not write TypeScript, JavaScript, or Expo Router code.
+- All back-end logic lives in `TecPrint.Api`. Controllers under `TecPrint.Api/Controllers/`, models under `TecPrint.Api/Models/`, EF Core DbContext under `TecPrint.Api/Data/`.
+- The web front-end (acesso pelo celular) lives in `TecPrint.Web/` — Controllers + Razor Views under `Views/`.
+- The desktop front-end (Windows local) lives in `TecPrint.Desktop/` — WPF under `MainWindow.xaml` and code-behind.
+- Database: SQL Server LocalDB/Express via Entity Framework Code First. Connection string in `TecPrint.Api/appsettings.json`.
+- Authentication: JWT (API) + Cookie (Web). Separate profiles: Admin (dono) and Funcionario.
+- .NET SDK 10 is used. Build with `dotnet build TecPrint.slnx`. Run with `dotnet run --project <projeto>`.
+
+## Commands
+
+```bash
+dotnet build TecPrint.slnx           # build toda a solução
+dotnet run --project TecPrint.Api    # roda a API (back-end)
+dotnet run --project TecPrint.Web    # roda a web (acesso pelo celular)
+dotnet run --project TecPrint.Desktop # roda o desktop Windows (.exe)
+```
+
+## Architecture
+
+- Back-end: ASP.NET Core Web API (.NET 10) + EF Core + SQL Server LocalDB
+- Web (celular via navegador): ASP.NET Core MVC + Razor Pages
+- Desktop (Windows local): WPF
+- Auth: JWT tokens (API), Cookie auth (Web). Perfis: Admin e Funcionario.
+- Seeded admin user: email `admin@tecprint.com`, senha `admin123`
+
+## Database Legacy
+
+O projeto foi modelado para ser compatível com o banco de dados antigo (arquivo .mdf do SQL Server). Quando o arquivo .mdf estiver disponível, anexe ao SQL Server LocalDB/Express e ajuste o modelo (Database First ou Code First) para preservar os dados existentes.

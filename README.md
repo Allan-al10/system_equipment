@@ -1,102 +1,104 @@
-# TecInfo
+# TecPrint
 
-Aplicativo de gestão de ordens de serviço para assistência técnica, construído com Expo Router.
+Sistema de gestão de ordens de serviço para assistência técnica, reescrito em **C# (.NET 10)**.
+
+O sistema roda localmente no Windows (aplicativo desktop) e pode ser acessado pelo navegador do celular/tablet na mesma rede, permitindo que técnicos atualizem o status dos equipamentos enquanto o dono gerencia pelo computador.
+
+## Objetivo
+
+Substituir WhatsApp, apps simples e bloco de notas por algo mais sólido para entrada de equipamentos e mudança de estado conforme o serviço avança.
+
+## Stack
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Linguagem | C# 12 / .NET 10 (LTS) |
+| Back-end | ASP.NET Core Web API |
+| Banco de dados | SQL Server LocalDB / Express (local no Windows) |
+| Desktop (Windows) | WPF (aplicativo .exe nativo) |
+| Web (celular via navegador) | ASP.NET Core MVC + Razor Pages |
+| Autenticação | JWT (API) + Cookie (Web) |
+
+## Perfis de usuário
+
+- **Admin (dono do projeto):** login separado, cadastro de funcionários, backup, acesso total.
+- **Funcionário:** login separado, cria/edita ordens de serviço, muda status, registra defeitos e anotações.
+
+## Funcionalidades
+
+- Login com perfis separados (Admin vs Funcionário)
+- Nova OS (entrada de equipamento)
+- Listagem de OS com filtro por status
+- Mudança de estado do equipamento (Recebido → Orçamento → Aguardando Aprovação → Reparo → Pronto → Entregue → Cancelado)
+- Defeitos
+- Registros / Anotações por OS
+- Clientes e Equipamentos
+- Backup local do banco de dados
 
 ## Requisitos
 
-- Node.js 22.13 ou superior
-- npm
-- **Expo Go atualizado** no celular (versão mais recente, com suporte ao SDK 58)
-- Celular e computador na mesma rede Wi-Fi (ou uso de túnel)
+- .NET SDK 10 instalado no Windows
+- SQL Server LocalDB ou SQL Server Express (para o banco local)
+- Para acesso pelo celular: computador e celular na mesma rede Wi-Fi
 
-## Instalação
+## Como rodar
 
+No terminal, na raiz do projeto:
+
+### 1. Back-end (API)
 ```bash
-npm install
+dotnet run --project TecPrint.Api
+```
+A API sobe em `https://localhost:5001` (e HTTP na 5000).
+
+### 2. Web (acesso pelo celular/tablet)
+```bash
+dotnet run --project TecPrint.Web
+```
+No navegador do celular, acesse o IP da máquina na rede, por exemplo: `http://192.168.x.x:5000`
+
+### 3. Desktop (Windows local)
+```bash
+dotnet run --project TecPrint.Desktop
+```
+Gera um aplicativo `.exe` nativo para Windows.
+
+## Credencial padrão (primeiro acesso)
+
+- E-mail: `admin@tecprint.com`
+- Senha: `admin123`
+- Perfil: Administrador
+
+## Estrutura da solução
+
+```
+TecPrint.slnx
+├── TecPrint.Api/         # ASP.NET Core Web API (back-end compartilhado)
+│   ├── Controllers/      # Auth, Ordens (OS, clientes, equipamentos, defeitos, registros)
+│   ├── Data/             # AppDbContext (EF Core + SQL Server)
+│   ├── Models/           # Usuario, Cliente, Equipamento, OrdemServico, Defeito, RegistroAnotacao
+│   └── appsettings.json  # Connection string e configurações JWT
+├── TecPrint.Web/         # ASP.NET Core MVC (navegador do celular)
+│   ├── Controllers/      # Account, Ordens
+│   ├── Services/         # ApiService, TokenService
+│   └── Views/            # Razor views (Login, Cadastro, Ordens Index/Detalhes/Novo)
+└── TecPrint.Desktop/     # WPF (Windows local)
+    ├── MainWindow.xaml   # Interface desktop
+    └── MainWindow.xaml.cs # Lógica do desktop (HttpClient para a API)
 ```
 
-## Testar no Expo Go (versão mais recente)
+## Banco de dados antigo (.mdf)
 
-O projeto está no **Expo SDK 58**, que é exatamente o SDK suportado pela versão mais recente do Expo Go. Todas as bibliotecas nativas usadas estão incluídas no Expo Go, então não é necessário gerar um development build.
-
-1. Atualize o **Expo Go** na Google Play Store (Android) ou App Store (iOS). A versão precisa ser a mais recente, compatível com o SDK 58.
-2. Faça login na sua conta Expo no terminal:
-
-   ```bash
-   npx expo login
-   ```
-
-3. Abra o Expo Go no celular e entre com **a mesma conta** (toque no avatar no canto superior direito). O login é obrigatório no Expo Go para iOS físico e recomendado no Android.
-4. Inicie o servidor forçando o modo Expo Go:
-
-   ```bash
-   npm run start:go
-   ```
-
-5. Escaneie o QR code:
-   - **Android:** abra o Expo Go e use a opção de escanear QR code.
-   - **iOS:** use o app Câmera.
-
-Se o celular não estiver na mesma rede do computador, use o túnel (requer login na conta Expo):
-
-```bash
-npm run start:go:tunnel
-```
-
-> Dica: se o QR code não conectar, rode `npx expo start --go --clear` para limpar o cache do Metro.
-
-O Expo Go é indicado para desenvolvimento e testes. Para publicar o app ou usar um módulo nativo que não esteja incluído no Expo Go, será necessário criar um development build (`npx expo run:android`, `npx expo run:ios` ou `eas build --profile development`).
-
-## Scripts
-
-| Comando | Descrição |
-| --- | --- |
-| `npm run start` | Inicia o servidor de desenvolvimento (Expo Go por padrão) |
-| `npm run start:go` | Inicia o servidor explicitamente em modo Expo Go |
-| `npm run start:go:tunnel` | Inicia em modo Expo Go usando túnel |
-| `npm run android` | Abre no Android (dispositivo ou emulador) |
-| `npm run ios` | Abre no simulador iOS |
-| `npm run web` | Abre no navegador |
-| `npm run lint` | Executa o ESLint |
-| `npm run typecheck` | Verifica os tipos TypeScript |
-| `npm run doctor` | Diagnostica dependências e configuração do Expo |
-| `npm run export:web` | Gera o export web |
+Se você possui um banco de dados antigo no formato do Microsoft SQL Server (arquivo `.mdf`), envie-o para que possamos anexar ao SQL Server LocalDB/Express e migrar os dados existentes sem perder nada.
 
 ## Verificações antes de concluir uma alteração
 
 ```bash
-npm run lint
-npm run typecheck
-npm run doctor
+dotnet build TecPrint.slnx
 ```
 
-Para checar se as dependências continuam compatíveis com o SDK:
+## Pendências (futuras)
 
-```bash
-npx expo install --check
-```
-
-## Pendências
-
-O app reúne em **Pendências** dois tipos de acompanhamento:
-
-- **Serviços atrasados:** toda OS com prazo de entrega vencido, ainda não entregue e não recusada.
-- **Garantias a fazer:** marcação manual no detalhe da OS para retornos e serviços em garantia pendentes.
-
-O prazo padrão de novas OS é definido em **Ajustes** (0 desativa o prazo automático) e pode ser ajustado em cada OS. O filtro **Pendências** fica disponível na lista de ordens, e o Início mostra um resumo com a quantidade de atrasos e garantias a fazer.
-
-## Registros
-
-A aba **Registros** reúne o histórico dos serviços que saíram do fluxo ativo, com uma ficha somente leitura contendo cliente, equipamento, defeito, diagnóstico, orçamento, serviço realizado, garantia, datas e histórico completo.
-
-- **Entregues:** OS com status **Pronto** e entrega registrada. É o grupo usado para consultar o serviço em retornos e garantias.
-- **Aguardando entrega:** OS com status **Pronto** ainda não entregues. Saem deste grupo e passam para **Entregues** quando a entrega é registrada.
-- **Cancelada:** OS com status **Recusado**, com a data de cancelamento registrada.
-
-A lista permite buscar por cliente, equipamento, número da OS, nº de série ou serviço e filtrar entre **Todos**, **Entregues**, **Aguardando entrega** e **Cancelados**. A busca pelo nº de série ajuda a localizar o histórico do equipamento em retornos e garantias. O botão **Ver registro** no detalhe de uma OS pronta ou cancelada abre a mesma ficha. Para alterar dados ou registrar a entrega, use **Abrir OS original** dentro do registro.
-
-## Estrutura
-
-- `src/app/` — rotas do Expo Router (telas e layouts)
-- `src/components/` — componentes reutilizáveis
-- `src/lib/` — armazenamento local, contexto de dados, formatação e utilitários
+- Backup automático do banco de dados
+- Relatórios de OS por período
+- Sincronização de dados entre desktop e web em tempo real
