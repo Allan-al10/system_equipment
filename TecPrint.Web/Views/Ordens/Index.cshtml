@@ -1,0 +1,65 @@
+@{
+    ViewData["Title"] = "Ordens de Serviço";
+}
+
+<div class="flex">
+    <a href="@Url.Action("Novo", "Ordens")" class="btn btn-success">+ Nova OS</a>
+    <a href="@Url.Action("Index", "Ordens")" class="btn">Limpar filtro</a>
+</div>
+
+<div class="card">
+    <h2>Lista de Ordens</h2>
+
+    <form method="get" style="margin-bottom: 12px;">
+        <label>Filtrar por status:</label>
+        <select name="status" onchange="this.form.submit()">
+            <option value="">Todos</option>
+            <option value="Recebido" @(ViewBag.StatusSelecionado == "Recebido" ? "selected" : "")>Recebido</option>
+            <option value="Orcamento" @(ViewBag.StatusSelecionado == "Orcamento" ? "selected" : "")>Orçamento</option>
+            <option value="AguardandoAprovacao" @(ViewBag.StatusSelecionado == "AguardandoAprovacao" ? "selected" : "")>Aguardando Aprovação</option>
+            <option value="Reparo" @(ViewBag.StatusSelecionado == "Reparo" ? "selected" : "")>Reparo</option>
+            <option value="Pronto" @(ViewBag.StatusSelecionado == "Pronto" ? "selected" : "")>Pronto</option>
+            <option value="Entregue" @(ViewBag.StatusSelecionado == "Entregue" ? "selected" : "")>Entregue</option>
+            <option value="Cancelado" @(ViewBag.StatusSelecionado == "Cancelado" ? "selected" : "")>Cancelado</option>
+        </select>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nº OS</th>
+                <th>Cliente</th>
+                <th>Equipamento</th>
+                <th>Status</th>
+                <th>Abertura</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model != null)
+        {
+            foreach (var os in Model)
+            {
+                <tr>
+                    <td><strong>@os.NumeroOS</strong></td>
+                    <td>@os.ClienteNome</td>
+                    <td>@os.EquipamentoDescricao ?? "—"</td>
+                    <td>
+                        <span class="badge @("bg-" + os.Status.ToString().ToLower())">
+                            @os.Status
+                        </span>
+                    </td>
+                    <td>@os.DataAbertura.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <a href="@Url.Action("Detalhes", new { id = os.Id })" class="btn btn-sm">Detalhes</a>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="6">Nenhuma ordem encontrada.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

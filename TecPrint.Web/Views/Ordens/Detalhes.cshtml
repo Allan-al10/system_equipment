@@ -1,0 +1,108 @@
+@{
+    var os = Model;
+    ViewData["Title"] = "Detalhes da OS";
+}
+
+@if (os == null)
+{
+    <div class="card">
+        <h2>Ordem não encontrada</h2>
+        <a href="@Url.Action("Index", "Ordens")" class="btn">Voltar</a>
+    </div>
+}
+else
+{
+    var statusCss = $"bg-{os.Status.ToString().ToLower()}";
+
+    <div class="card">
+        <h2>OS #@os.NumeroOS</h2>
+        <p><strong>Cliente:</strong> @os.ClienteNome</p>
+        <p><strong>Equipamento:</strong> @os.EquipamentoDescricao ?? "Não informado"</p>
+        <p><strong>Aberto por:</strong> @os.UsuarioAberturaNome</p>
+        <p><strong>Responsável:</strong> @os.UsuarioResponsavelNome ?? "Não definido"</p>
+        <p><strong>Data abertura:</strong> @os.DataAbertura.ToString("dd/MM/yyyy HH:mm")</p>
+        @if (os.DataConclusao.HasValue)
+        {
+            <p><strong>Concluída em:</strong> @os.DataConclusao.Value.ToString("dd/MM/yyyy HH:mm")</p>
+        }
+        <p><strong>Status atual:</strong> <span class="badge @statusCss">@os.Status</span></p>
+
+        <h3 style="margin-top:16px;">Descrição do problema</h3>
+        <p>@os.DescricaoProblema</p>
+
+        @if (os.ValorOrcamento.HasValue)
+        {
+            <p><strong>Valor orçamento:</strong> R$ @os.ValorOrcamento.Value.ToString("F2")</p>
+        }
+        @if (os.ValorFinal.HasValue)
+        {
+            <p><strong>Valor final:</strong> R$ @os.ValorFinal.Value.ToString("F2")</p>
+        }
+        @if (!string.IsNullOrEmpty(os.Observacoes))
+        {
+            <p><strong>Observações:</strong> @os.Observacoes</p>
+        }
+
+        <h3 style="margin-top:16px;">Alterar status</h3>
+        <form method="get" action="@Url.Action("AlterarStatus", new { id = os.Id })" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input type="hidden" name="id" value="@os.Id" />
+            <button type="submit" name="novoStatus" value="Orcamento" class="btn btn-sm">Orçamento</button>
+            <button type="submit" name="novoStatus" value="AguardandoAprovacao" class="btn btn-sm">Aguardando Aprovação</button>
+            <button type="submit" name="novoStatus" value="Reparo" class="btn btn-sm">Reparo</button>
+            <button type="submit" name="novoStatus" value="Pronto" class="btn btn-sm">Pronto</button>
+            <button type="submit" name="novoStatus" value="Entregue" class="btn btn-sm">Entregue</button>
+            <button type="submit" name="novoStatus" value="Cancelado" class="btn btn-sm btn-danger">Cancelar</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Defeitos</h2>
+        <form method="post" action="@Url.Action("AdicionarDefeito", new { ordemServicoId = os.Id })">
+            <label>Descrição do defeito</label>
+            <input type="text" name="descricao" required />
+            <button type="submit" class="btn btn-sm">Adicionar defeito</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr><th>Descrição</th><th>Data</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var defeito in ViewBag.Defeitos)
+            {
+                <tr>
+                    <td>@defeito.Descricao</td>
+                    <td>@defeito.Data.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Registros / Anotações</h2>
+        <form method="post" action="@Url.Action("AdicionarRegistro", new { ordemServicoId = os.Id })">
+            <label>Anotação</label>
+            <textarea name="texto" rows="3" required></textarea>
+            <button type="submit" class="btn btn-sm">Adicionar registro</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr><th>Usuário</th><th>Texto</th><th>Data</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var registro in ViewBag.Registros)
+            {
+                <tr>
+                    <td>@registro.UsuarioNome</td>
+                    <td>@registro.Texto</td>
+                    <td>@registro.Data.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <p><a href="@Url.Action("Index", "Ordens")" class="btn">Voltar à lista</a></p>
+}

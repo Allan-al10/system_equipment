@@ -1,0 +1,28 @@
+@{
+    ViewData["Title"] = "Entrar";
+}
+
+<div class="card" style="max-width: 400px;">
+    <h2>Entrar no TecPrint</h2>
+
+    @if (!string.IsNullOrEmpty(ViewData["Erro"] as string))
+    {
+        <div class="msg-erro">@ViewData["Erro"]</div>
+    }
+
+    <form method="post">
+        <div class="msg-erro" asp-validation-summary="All"></div>
+
+        <label>E-mail</label>
+        <input type="email" name="email" required />
+
+        <label>Senha</label>
+        <input type="password" name="senha" required />
+
+        <button type="submit" class="btn">Entrar</button>
+    </form>
+
+    <p style="font-size:13px; color:#666; margin-top:12px;">
+        Primeira vez? <a href="@Url.Action("Cadastro", "Account")">Cadastre-se</a>.
+    </p>
+</div>
