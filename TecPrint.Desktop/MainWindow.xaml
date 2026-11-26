@@ -58,6 +58,7 @@
                         <TextBlock Text="Descrição do problema:" FontWeight="SemiBold" Margin="0,8,0,0" />
                         <TextBox x:Name="TxtDescricaoProblema" Height="60" TextWrapping="Wrap" AcceptsReturn="True" />
                         <Button Content="Criar OS" Click="BtnCriarOs_Click" Margin="0,8,0,0" Background="#1e8449" BorderThickness="0" Foreground="White" />
+                        <Button Content="Cadastrar Cliente" Click="BtnCadastrarCliente_Click" Margin="0,8,0,0" Background="#8e44ad" BorderThickness="0" Foreground="White" />
                         <Button Content="Cancelar" Click="BtnCancelarNovaOs_Click" Margin="0,4,0,0" Background="#7f8c8d" BorderThickness="0" Foreground="White" />
                         <TextBlock x:Name="TxtErroNovaOs" Foreground="Red" Margin="0,8,0,0" TextWrapping="Wrap" />
                     </StackPanel>

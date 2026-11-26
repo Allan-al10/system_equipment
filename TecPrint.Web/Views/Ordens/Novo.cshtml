@@ -1,28 +1,41 @@
+@using System.Linq
 @{
     ViewData["Title"] = "Nova Ordem de Serviço";
+    var clientes = ViewBag.Clientes as IEnumerable<dynamic> ?? new List<dynamic>();
+    var temClientes = clientes.Any();
 }
 
 <div class="card" style="max-width: 500px;">
     <h2>Nova Ordem de Serviço</h2>
 
-    <form method="post">
-        <label>Cliente</label>
-        <select name="clienteId" required>
-            <option value="">Selecione um cliente</option>
-            @foreach (var cliente in ViewBag.Clientes)
-            {
-                <option value="@cliente.Id">@cliente.Nome</option>
-            }
-        </select>
+    @if (!temClientes)
+    {
+        <div class="msg-erro">
+            <strong>Não há clientes cadastrados.</strong> Cadastre um cliente antes de criar uma OS.
+        </div>
+        <a href="@Url.Action("CadastroCliente", "Ordens")" class="btn btn-success">+ Cadastrar Cliente</a>
+    }
+    else
+    {
+        <form method="post">
+            <label>Cliente</label>
+            <select name="clienteId" required>
+                <option value="">Selecione um cliente</option>
+                @foreach (var cliente in clientes)
+                {
+                    <option value="@cliente.Id">@cliente.Nome</option>
+                }
+            </select>
 
-        <label>Equipamento (opcional)</label>
-        <input type="number" name="equipamentoId" placeholder="ID do equipamento" />
+            <label>Equipamento (opcional)</label>
+            <input type="number" name="equipamentoId" placeholder="ID do equipamento" />
 
-        <label>Descrição do problema</label>
-        <textarea name="descricaoProblema" rows="4" required placeholder="O que o cliente relata?"></textarea>
+            <label>Descrição do problema</label>
+            <textarea name="descricaoProblema" rows="4" required placeholder="O que o cliente relata?"></textarea>
 
-        <button type="submit" class="btn btn-success">Criar OS</button>
-    </form>
+            <button type="submit" class="btn btn-success">Criar OS</button>
+        </form>
+    }
 
     <p style="font-size:13px; color:#666; margin-top:12px;">
         <a href="@Url.Action("Index", "Ordens")" class="btn">Voltar</a>

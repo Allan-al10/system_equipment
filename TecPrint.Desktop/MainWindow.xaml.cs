@@ -120,6 +120,14 @@ public partial class MainWindow : Window
         TxtErroNovaOs.Text = string.Empty;
     }
 
+    private async void BtnCadastrarCliente_Click(object sender, RoutedEventArgs e)
+    {
+        var cadastroWindow = new CadastroClienteWindow { Owner = this };
+        cadastroWindow.ShowDialog();
+        // Recarrega a lista de clientes após fechar a janela de cadastro
+        await CarregarClientes();
+    }
+
     private async void BtnCriarOs_Click(object sender, RoutedEventArgs e)
     {
         if (CmbCliente.SelectedValue == null)

@@ -91,6 +91,29 @@ public class OrdensController : Controller
         return RedirectToAction("Detalhes", new { id = ordemServicoId });
     }
 
+    // ========== CADASTRO DE CLIENTE ==========
+    public async Task<IActionResult> CadastroCliente()
+    {
+        if (!User.Identity!.IsAuthenticated) return RedirectToAction("Login", "Account");
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CadastroCliente(string nome, string telefone, string endereco, string documento)
+    {
+        if (!User.Identity!.IsAuthenticated) return RedirectToAction("Login", "Account");
+
+        var sucesso = await _api.CriarClienteAsync(nome, telefone, endereco, documento);
+        if (sucesso != true)
+        {
+            ModelState.AddModelError(string.Empty, "Erro ao cadastrar cliente.");
+            return View();
+        }
+
+        TempData["Sucesso"] = "Cliente cadastrado com sucesso.";
+        return RedirectToAction("Novo");
+    }
+
     // ========== EDIÇÃO DE ORDEM ==========
     public async Task<IActionResult> Editar(int id)
     {
