@@ -43,6 +43,8 @@ public class AppDbContext : DbContext
         {
             e.Property(os => os.NumeroOS).IsRequired().HasMaxLength(20);
             e.Property(os => os.DescricaoProblema).IsRequired();
+            e.Property(os => os.ValorOrcamento).HasColumnType("decimal(18,2)");
+            e.Property(os => os.ValorFinal).HasColumnType("decimal(18,2)");
             e.HasIndex(os => os.NumeroOS).IsUnique();
             e.HasOne(os => os.Cliente).WithMany(c => c.OrdensServico).HasForeignKey(os => os.ClienteId);
             e.HasOne(os => os.Equipamento).WithMany(eq => eq.OrdensServico).HasForeignKey(os => os.EquipamentoId);

@@ -1,0 +1,52 @@
+@{
+    var os = Model;
+    ViewData["Title"] = "Editar OS #" + os?.NumeroOS;
+}
+
+@if (os == null)
+{
+    <div class="card">
+        <h2>Ordem não encontrada</h2>
+        <a href="@Url.Action("Index", "Ordens")" class="btn">Voltar</a>
+    </div>
+}
+else
+{
+    <div class="card" style="max-width: 600px;">
+        <h2>Editar Ordem de Serviço</h2>
+        <p><strong>Nº OS:</strong> @os.NumeroOS</p>
+        <p><strong>Status atual:</strong> <span class="badge @("bg-" + os.Status.ToString().ToLower())">@os.Status</span></p>
+
+        <form method="post">
+            <label>Cliente</label>
+            <select name="clienteId" required>
+                <option value="">Selecione um cliente</option>
+                @foreach (var cliente in ViewBag.Clientes)
+                {
+                    <option value="@cliente.Id" @(cliente.Id == os.ClienteId ? "selected" : "")>@cliente.Nome</option>
+                }
+            </select>
+
+            <label>Equipamento (ID)</label>
+            <input type="number" name="equipamentoId" value="@os.EquipamentoId" />
+
+            <label>Descrição do problema</label>
+            <textarea name="descricaoProblema" rows="4" required>@os.DescricaoProblema</textarea>
+
+            <label>Valor orçamento</label>
+            <input type="text" name="valorOrcamento" value="@(os.ValorOrcamento.HasValue ? os.ValorOrcamento.Value.ToString("F2") : "")" placeholder="0,00" />
+
+            <label>Valor final</label>
+            <input type="text" name="valorFinal" value="@(os.ValorFinal.HasValue ? os.ValorFinal.Value.ToString("F2") : "")" placeholder="0,00" />
+
+            <label>Data previsão</label>
+            <input type="text" name="dataPrevisao" value="@(os.DataPrevisao.HasValue ? os.DataPrevisao.Value.ToString("yyyy-MM-dd") : "")" placeholder="YYYY-MM-DD" />
+
+            <label>Observações</label>
+            <textarea name="observacoes" rows="3">@os.Observacoes</textarea>
+
+            <button type="submit" class="btn btn-success">Salvar alterações</button>
+            <a href="@Url.Action("Detalhes", new { id = os.Id })" class="btn" style="margin-left:8px;">Cancelar</a>
+        </form>
+    </div>
+}

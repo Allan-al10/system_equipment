@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -44,6 +45,7 @@ public partial class MainWindow : Window
             PainelPrincipal.Visibility = Visibility.Visible;
 
             await CarregarOrdens();
+            await CarregarClientes();
         }
         catch (Exception ex)
         {
@@ -98,7 +100,85 @@ public partial class MainWindow : Window
 
     private async void BtnNovaOs_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Funcionalidade de nova OS disponível na versão web (TecPrint.Web).", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+        PainelNovaOs.Visibility = PainelNovaOs.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        TxtErroNovaOs.Text = string.Empty;
+
+        if (PainelNovaOs.Visibility == Visibility.Visible)
+        {
+            await CarregarClientes();
+            CmbCliente.SelectedIndex = -1;
+            TxtEquipamentoId.Text = string.Empty;
+            TxtDescricaoProblema.Text = string.Empty;
+        }
+    }
+
+    private void BtnCancelarNovaOs_Click(object sender, RoutedEventArgs e)
+    {
+        PainelNovaOs.Visibility = Visibility.Collapsed;
+        TxtErroNovaOs.Text = string.Empty;
+    }
+
+    private async void BtnCriarOs_Click(object sender, RoutedEventArgs e)
+    {
+        if (CmbCliente.SelectedValue == null)
+        {
+            TxtErroNovaOs.Text = "Selecione um cliente.";
+            return;
+        }
+
+        var clienteId = (int)CmbCliente.SelectedValue;
+        int? equipamentoId = null;
+        if (!string.IsNullOrWhiteSpace(TxtEquipamentoId.Text) && int.TryParse(TxtEquipamentoId.Text, out var eqId))
+            equipamentoId = eqId;
+
+        var descricao = TxtDescricaoProblema.Text.Trim();
+        if (string.IsNullOrEmpty(descricao))
+        {
+            TxtErroNovaOs.Text = "Informe a descrição do problema.";
+            return;
+        }
+
+        try
+        {
+            var dto = new { ClienteId = clienteId, EquipamentoId = equipamentoId, DescricaoProblema = descricao };
+            var json = JsonSerializer.Serialize(dto);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.PostAsync("api/ordens", content);
+            if (response.IsSuccessStatusCode)
+            {
+                TxtErroNovaOs.Text = string.Empty;
+                PainelNovaOs.Visibility = Visibility.Collapsed;
+                await CarregarOrdens();
+            }
+            else
+            {
+                TxtErroNovaOs.Text = "Erro ao criar ordem de serviço.";
+            }
+        }
+        catch (Exception ex)
+        {
+            TxtErroNovaOs.Text = $"Erro: {ex.Message}";
+        }
+    }
+
+    private async Task CarregarClientes()
+    {
+        try
+        {
+            var response = await _http.GetAsync("api/ordens/clientes");
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync();
+
+            var clientes = JsonSerializer.Deserialize<List<ClienteDto>>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            CmbCliente.ItemsSource = clientes;
+        }
+        catch (Exception ex)
+        {
+            TxtErroNovaOs.Text = $"Erro ao carregar clientes: {ex.Message}";
+        }
     }
 
     private async void BtnAtualizarStatus_Click(object sender, RoutedEventArgs e)
@@ -158,3 +238,5 @@ public partial class MainWindow : Window
 public record OrdemDto(
     int Id, string NumeroOS, string ClienteNome, string? EquipamentoDescricao,
     string DescricaoProblema, string Status, DateTime DataAbertura, decimal? ValorFinal);
+
+public record ClienteDto(int Id, string Nome, string Telefone, string Endereco, string? Documento);

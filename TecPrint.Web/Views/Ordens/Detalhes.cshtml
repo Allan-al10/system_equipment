@@ -104,5 +104,6 @@ else
         </table>
     </div>
 
-    <p><a href="@Url.Action("Index", "Ordens")" class="btn">Voltar à lista</a></p>
+    <a href="@Url.Action("Editar", new { id = os.Id })" class="btn btn-sm">Editar ordem</a>
+    <a href="@Url.Action("Index", "Ordens")" class="btn">Voltar à lista</a>
 }

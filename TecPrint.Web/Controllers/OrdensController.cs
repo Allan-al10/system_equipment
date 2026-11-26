@@ -90,4 +90,33 @@ public class OrdensController : Controller
         await _api.CriarDefeitoAsync(ordemServicoId, descricao);
         return RedirectToAction("Detalhes", new { id = ordemServicoId });
     }
+
+    // ========== EDIÇÃO DE ORDEM ==========
+    public async Task<IActionResult> Editar(int id)
+    {
+        if (!User.Identity!.IsAuthenticated) return RedirectToAction("Login", "Account");
+
+        var ordem = await _api.ObterOrdemAsync(id);
+        if (ordem == null) return NotFound();
+
+        var clientes = await _api.ListarClientesAsync();
+        ViewBag.Clientes = clientes ?? new List<dynamic>();
+        return View(ordem);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Editar(int id, int clienteId, int? equipamentoId, string descricaoProblema, string valorOrcamento, string valorFinal, string dataPrevisao, string observacoes)
+    {
+        if (!User.Identity!.IsAuthenticated) return RedirectToAction("Login", "Account");
+
+        var sucesso = await _api.AtualizarOrdemAsync(id, clienteId, equipamentoId, descricaoProblema, valorOrcamento, valorFinal, dataPrevisao, observacoes);
+        if (sucesso != true)
+        {
+            TempData["Erro"] = "Erro ao atualizar ordem de serviço.";
+            return RedirectToAction("Editar", new { id });
+        }
+
+        TempData["Sucesso"] = "Ordem atualizada com sucesso.";
+        return RedirectToAction("Detalhes", new { id });
+    }
 }

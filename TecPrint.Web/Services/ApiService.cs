@@ -36,6 +36,27 @@ public class ApiService
         return JsonSerializer.Deserialize<T>(conteudo, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 
+    // ========== USUÁRIOS ==========
+    public async Task<(bool Sucesso, string? Token, string? Nome, string? Perfil, string? Erro)> CriarUsuarioAsync(string nome, string email, string senha, string perfil)
+    {
+        var client = CriarCliente(false);
+        var response = await client.PostAsync("api/auth/cadastro", Json(new
+        {
+            Nome = nome,
+            Email = email,
+            Senha = senha,
+            Perfil = perfil
+        }));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var erroConteudo = await response.Content.ReadAsStringAsync();
+            return (false, null, null, null, $"Erro ao cadastrar: {erroConteudo}");
+        }
+
+        return (true, null, null, null, null);
+    }
+
     // ========== LOGIN ==========
     public async Task<(bool Sucesso, string? Token, string? Nome, string? Perfil, string? Erro)> LoginAsync(string email, string senha)
     {
@@ -90,6 +111,23 @@ public class ApiService
     {
         var client = CriarCliente();
         var response = await client.PutAsync($"api/ordens/{id}/status", Json(new { Status = novoStatus }));
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool?> AtualizarOrdemAsync(int id, int clienteId, int? equipamentoId, string descricaoProblema, string valorOrcamento, string valorFinal, string dataPrevisao, string observacoes)
+    {
+        var client = CriarCliente();
+        var dto = new Dictionary<string, object?>
+        {
+            ["ClienteId"] = clienteId,
+            ["EquipamentoId"] = equipamentoId,
+            ["DescricaoProblema"] = descricaoProblema,
+            ["ValorOrcamento"] = string.IsNullOrWhiteSpace(valorOrcamento) ? null : decimal.Parse(valorOrcamento),
+            ["ValorFinal"] = string.IsNullOrWhiteSpace(valorFinal) ? null : decimal.Parse(valorFinal),
+            ["DataPrevisao"] = string.IsNullOrWhiteSpace(dataPrevisao) ? null : DateTime.Parse(dataPrevisao),
+            ["Observacoes"] = observacoes
+        };
+        var response = await client.PutAsync($"api/ordens/{id}", Json(dto));
         return response.IsSuccessStatusCode;
     }
 

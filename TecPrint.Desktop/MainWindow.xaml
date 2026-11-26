@@ -48,6 +48,19 @@
                         </DataGrid.Columns>
                     </DataGrid>
                     <Button Content="Nova OS" Click="BtnNovaOs_Click" Margin="0,12,0,0" Background="#1a5276" BorderThickness="0" Foreground="White" />
+
+                    <StackPanel x:Name="PainelNovaOs" Visibility="Collapsed" Margin="0,12,0,0">
+                        <TextBlock Text="Nova Ordem de Serviço" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="Cliente:" FontWeight="SemiBold" Margin="0,4,0,0" />
+                        <ComboBox x:Name="CmbCliente" DisplayMemberPath="Nome" SelectedValuePath="Id" />
+                        <TextBlock Text="Equipamento (ID, opcional):" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBox x:Name="TxtEquipamentoId" />
+                        <TextBlock Text="Descrição do problema:" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBox x:Name="TxtDescricaoProblema" Height="60" TextWrapping="Wrap" AcceptsReturn="True" />
+                        <Button Content="Criar OS" Click="BtnCriarOs_Click" Margin="0,8,0,0" Background="#1e8449" BorderThickness="0" Foreground="White" />
+                        <Button Content="Cancelar" Click="BtnCancelarNovaOs_Click" Margin="0,4,0,0" Background="#7f8c8d" BorderThickness="0" Foreground="White" />
+                        <TextBlock x:Name="TxtErroNovaOs" Foreground="Red" Margin="0,8,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Margin="12,0,0,0">

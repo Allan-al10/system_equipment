@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="TecPrint.Api/TecPrint.Api.csproj" />
   <Project Path="TecPrint.Desktop/TecPrint.Desktop.csproj" />
+  <Project Path="TecPrint.Tests/TecPrint.Tests.csproj" />
   <Project Path="TecPrint.Web/TecPrint.Web.csproj" />
 </Solution>
