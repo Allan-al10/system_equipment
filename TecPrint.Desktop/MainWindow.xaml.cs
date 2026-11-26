@@ -9,7 +9,7 @@ namespace TecPrint.Desktop;
 
 public partial class MainWindow : Window
 {
-    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://localhost:5001") };
+    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://localhost:5000") };
     private string? _token;
     private int _ordemSelecionadaId;
 

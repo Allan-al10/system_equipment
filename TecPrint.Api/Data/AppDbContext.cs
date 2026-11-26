@@ -59,8 +59,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RegistroAnotacao>(e =>
         {
             e.Property(r => r.Texto).IsRequired();
-            e.HasOne(r => r.OrdemServico).WithMany(os => os.Registros).HasForeignKey(r => r.OrdemServicoId);
-            e.HasOne(r => r.Usuario).WithMany(u => u.Registros).HasForeignKey(r => r.UsuarioId);
+            e.HasOne(r => r.OrdemServico).WithMany(os => os.Registros).HasForeignKey(r => r.OrdemServicoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Usuario).WithMany(u => u.Registros).HasForeignKey(r => r.UsuarioId).OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

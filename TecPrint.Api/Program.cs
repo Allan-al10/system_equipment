@@ -68,6 +68,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks();
 
 // CORS para permitir acesso pelo navegador do celular na mesma rede
 builder.Services.AddCors(options =>
@@ -110,7 +111,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("PermitirTudo");
 app.UseAuthentication();
 app.UseAuthorization();

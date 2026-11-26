@@ -5,8 +5,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ============================ SERVIÇOS ============================
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 
-var apiUrl = builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5001";
+var apiUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5000";
 
 builder.Services.AddHttpClient("TecPrintApi", client =>
 {
@@ -30,13 +31,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 var app = builder.Build();
 
 // ============================ MIDDLEWARE ============================
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Account/Login");
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
@@ -44,6 +48,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();

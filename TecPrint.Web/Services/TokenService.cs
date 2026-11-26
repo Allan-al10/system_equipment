@@ -27,7 +27,7 @@ public class TokenService
         var options = new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = false,
             SameSite = SameSiteMode.Lax,
             Expires = expiracao ?? DateTimeOffset.Now.AddHours(12)
         };
